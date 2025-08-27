@@ -19,19 +19,15 @@ const ContractForm = () => {
     otherPartyName: '',
     jurisdiction: ''
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const [isEnhancedMode, setIsEnhancedMode] = useState(false);
+  const [isEnhancedMode, setIsEnhancedMode] = useState(true);
   const contractTypes = [
     { value: 'Employment Agreement', label: 'Employment Agreement' },
-    { value: 'NDA', label: 'Non-Disclosure Agreement (NDA)' },
-    { value: 'Service Contract', label: 'Service Contract' },
-    { value: 'Independent Contractor', label: 'Independent Contractor Agreement' },
-    { value: 'Purchase Agreement', label: 'Purchase Agreement' }
+    { value: 'CA Employment Agreement', label: 'California Employment Agreement' }
   ];
-
   const jurisdictions = [
     'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
     'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
