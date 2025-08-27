@@ -41,6 +41,247 @@
         }
       }
     },
+    "workplace_safety": {
+      "category": "employment_terms",
+      "title": "Workplace Safety and Compliance",
+      "variations": {
+        "basic_safety": {
+          "risk_level": "low",
+          "legal_stance": "neutral",
+          "clause": "Employee agrees to comply with all applicable workplace safety rules, regulations, and Company policies designed to ensure a safe working environment.",
+          "legal_justification": "Basic safety compliance obligation meeting minimum Cal/OSHA requirements."
+        },
+        "comprehensive_safety": {
+          "risk_level": "moderate",
+          "legal_stance": "pro_employer",
+          "clause": "Employee shall comply with all federal, state, and local safety regulations including Cal/OSHA requirements, report safety hazards immediately, participate in required safety training, and use personal protective equipment as directed. Employee acknowledges responsibility for maintaining a safe workplace.",
+          "legal_justification": "Detailed safety compliance with reporting obligations and shared responsibility framework."
+        },
+        "liability_safety": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "Employee assumes responsibility for workplace safety compliance and agrees to indemnify Company for safety violations resulting from Employee's negligent or willful misconduct. Employee shall immediately report injuries, hazards, or safety concerns and participate in all required safety programs, training, and investigations.",
+          "legal_justification": "Comprehensive safety framework with employee indemnification for negligent safety violations."
+        }
+      }
+    },
+    "remote_work": {
+      "category": "employment_terms",
+      "title": "Remote Work and Telecommuting",
+      "variations": {
+        "office_based": {
+          "risk_level": "low",
+          "legal_stance": "pro_employer",
+          "clause": "Employee's primary work location is Company's office at [Work Location]. Remote work may be permitted occasionally at Company's discretion and subject to business needs.",
+          "legal_justification": "Office-centric work arrangement with limited remote work flexibility."
+        },
+        "flexible_remote": {
+          "risk_level": "moderate",
+          "legal_stance": "neutral",
+          "clause": "Employee may work remotely up to [X] days per week subject to manager approval and business requirements. Remote work requires reliable internet, appropriate workspace, and compliance with Company's remote work policies including data security requirements.",
+          "legal_justification": "Balanced remote work arrangement with security and approval requirements."
+        },
+        "full_remote": {
+          "risk_level": "high",
+          "legal_stance": "pro_employee",
+          "clause": "Employee is authorized to work remotely full-time from [Location/State] subject to applicable tax and legal requirements. Company shall provide necessary equipment and technology support. Employee remains responsible for maintaining secure work environment and complying with confidentiality obligations regardless of work location.",
+          "legal_justification": "Full remote work authorization with equipment support and compliance obligations."
+        }
+      }
+    },
+    "expense_reimbursement": {
+      "category": "employment_terms",
+      "title": "Business Expenses and Reimbursement",
+      "variations": {
+        "basic_reimbursement": {
+          "risk_level": "low",
+          "legal_stance": "pro_employee",
+          "clause": "Company shall reimburse Employee for reasonable business expenses incurred in the course of employment upon submission of appropriate documentation in accordance with Company policy.",
+          "legal_justification": "Standard expense reimbursement obligation ensuring employee cost recovery for business activities."
+        },
+        "policy_dependent": {
+          "risk_level": "moderate",
+          "legal_stance": "neutral",
+          "clause": "Employee may incur reasonable business expenses with prior approval as required by Company's expense policy. Reimbursement is subject to proper documentation, receipt submission, and compliance with spending limits and approval requirements.",
+          "legal_justification": "Policy-controlled expense reimbursement with approval and documentation requirements."
+        },
+        "limited_reimbursement": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "Expense reimbursement is discretionary and limited to pre-approved expenses with receipts submitted within 30 days. Employee is responsible for all personal expenses and any business expenses exceeding approved limits. Company may require credit card usage for business expenses to control costs and documentation.",
+          "legal_justification": "Restrictive expense policy with pre-approval requirements and limited reimbursement scope."
+        }
+      }
+    },
+    "performance_evaluation": {
+      "category": "employment_terms",
+      "title": "Performance Evaluation and Review",
+      "variations": {
+        "annual_review": {
+          "risk_level": "low",
+          "legal_stance": "pro_employee",
+          "clause": "Employee shall receive annual performance evaluations assessing job performance, goal achievement, and professional development opportunities. Performance reviews shall be conducted in good faith with opportunity for Employee input and discussion.",
+          "legal_justification": "Structured performance review process with employee participation rights and development focus."
+        },
+        "discretionary_review": {
+          "risk_level": "moderate",
+          "legal_stance": "neutral",
+          "clause": "Company may conduct performance evaluations at such intervals and using such criteria as Company deems appropriate. Performance assessments are confidential management tools and do not create contractual rights or guarantees of continued employment.",
+          "legal_justification": "Flexible performance review approach with disclaimer of contractual performance rights."
+        },
+        "at_will_review": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "Performance evaluations, if conducted, are discretionary management tools that do not alter the at-will employment relationship or create any right to employment continuation. Poor performance reviews may result in immediate termination, and positive reviews do not guarantee job security or prevent termination for any reason.",
+          "legal_justification": "Performance evaluation framework emphasizing at-will employment and disclaiming job security implications."
+        }
+      }
+    },
+    "professional_development": {
+      "category": "employment_terms",
+      "title": "Training and Professional Development",
+      "variations": {
+        "development_support": {
+          "risk_level": "low",
+          "legal_stance": "pro_employee",
+          "clause": "Company encourages Employee's professional development and may provide training opportunities, conference attendance, and educational support subject to budget availability and business needs.",
+          "legal_justification": "Employee-favorable professional development with Company support framework."
+        },
+        "conditional_development": {
+          "risk_level": "moderate",
+          "legal_stance": "neutral",
+          "clause": "Professional development opportunities are discretionary and subject to Company approval, budget constraints, and Employee's continued employment. Employee may be required to remain employed for specified periods following expensive training or education support.",
+          "legal_justification": "Balanced development approach with service commitment requirements for significant investments."
+        },
+        "limited_development": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "Training and development are provided solely at Company's discretion. Employee agrees to reimburse Company for training costs exceeding $[Amount] if employment terminates voluntarily within [12] months. Professional development does not create any obligation for career advancement or salary increases.",
+          "legal_justification": "Cost-protective development policy with reimbursement obligations and disclaimer of advancement expectations."
+        }
+      }
+    },
+    "technology_use": {
+      "category": "general_provisions",
+      "title": "Technology Use and Equipment",
+      "variations": {
+        "basic_tech_policy": {
+          "risk_level": "low",
+          "legal_stance": "neutral",
+          "clause": "Employee shall use Company technology resources in accordance with Company's technology use policies and agrees to return all Company equipment upon termination of employment.",
+          "legal_justification": "Standard technology use compliance with equipment return obligation."
+        },
+        "monitoring_policy": {
+          "risk_level": "moderate",
+          "legal_stance": "pro_employer",
+          "clause": "Employee acknowledges that Company technology systems may be monitored for security, productivity, and policy compliance purposes. Employee has no expectation of privacy in Company systems and agrees to appropriate use policies including restrictions on personal use.",
+          "legal_justification": "Technology monitoring framework with privacy expectation disclaimer and use restrictions."
+        },
+        "comprehensive_monitoring": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "Company reserves the right to monitor, access, and review all use of Company technology resources including email, internet usage, file access, and communications. Employee consents to such monitoring and waives privacy expectations. Violation of technology policies may result in immediate termination and potential legal action for misuse or damage.",
+          "legal_justification": "Extensive technology monitoring with comprehensive consent and enforcement provisions."
+        }
+      }
+    },
+    "social_media": {
+      "category": "general_provisions",
+      "title": "Social Media and Public Communications",
+      "variations": {
+        "basic_social_media": {
+          "risk_level": "low",
+          "legal_stance": "neutral",
+          "clause": "Employee agrees not to disclose Company confidential information through social media or other public communications and to avoid statements that could damage Company's reputation.",
+          "legal_justification": "Basic social media guidelines focusing on confidentiality protection and reputation management."
+        },
+        "comprehensive_social_media": {
+          "risk_level": "moderate",
+          "legal_stance": "pro_employer",
+          "clause": "Employee shall not post content on social media or public forums that identifies Company as employer without approval, discloses confidential information, disparages Company or colleagues, or violates professional standards. Personal opinions must be clearly distinguished from Company positions.",
+          "legal_justification": "Detailed social media policy with identification restrictions and professional standards requirements."
+        },
+        "restrictive_social_media": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "Employee's social media activities are subject to Company review and must comply with professional standards at all times. Employee agrees not to identify Company affiliation, comment on industry matters related to Company business, or engage in online activities that could reflect negatively on Company. Violations may result in disciplinary action up to termination.",
+          "legal_justification": "Restrictive social media policy with broad conduct standards and disciplinary enforcement mechanisms."
+        }
+      }
+    },
+    "immigration_compliance": {
+      "category": "general_provisions",
+      "title": "Immigration and Work Authorization",
+      "variations": {
+        "i9_compliance": {
+          "risk_level": "low",
+          "legal_stance": "neutral",
+          "clause": "Employee represents that Employee is authorized to work in the United States and agrees to provide documentation required by Form I-9 within three days of employment commencement.",
+          "legal_justification": "Basic I-9 compliance ensuring work authorization verification as required by Immigration Reform and Control Act."
+        },
+        "ongoing_authorization": {
+          "risk_level": "moderate",
+          "legal_stance": "pro_employer",
+          "clause": "Employee must maintain valid work authorization throughout employment and promptly notify Company of any changes in immigration status. Company may reverify work authorization as permitted by law, and employment is contingent upon continued work authorization.",
+          "legal_justification": "Ongoing work authorization requirements with notification obligations and reverification rights."
+        },
+        "visa_dependent": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "For employees requiring visa sponsorship, employment is specifically conditioned upon maintenance of valid immigration status. Employee agrees to comply with all visa requirements, notify Company immediately of status changes, and reimburse legal fees if employment terminates voluntarily within [24] months of sponsorship. Failure to maintain status results in immediate termination.",
+          "legal_justification": "Visa-dependent employment framework with comprehensive compliance requirements and fee reimbursement provisions."
+        }
+      }
+    },
+    "background_checks": {
+      "category": "general_provisions",
+      "title": "Background Checks and Screening",
+      "variations": {
+        "standard_background": {
+          "risk_level": "low",
+          "legal_stance": "neutral",
+          "clause": "Employment may be conditioned upon satisfactory completion of background checks as permitted by applicable law, including criminal history and employment verification.",
+          "legal_justification": "Standard background check authorization complying with Fair Credit Reporting Act and California screening laws."
+        },
+        "comprehensive_screening": {
+          "risk_level": "moderate",
+          "legal_stance": "pro_employer",
+          "clause": "Company may conduct background checks including criminal history, credit checks, employment verification, education verification, and professional license checks as job-related and consistent with business necessity. Employee authorizes such investigations and ongoing checks as required for position.",
+          "legal_justification": "Comprehensive screening framework with job-relatedness and business necessity standards."
+        },
+        "ongoing_screening": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer",
+          "clause": "Employee consents to initial and periodic background checks throughout employment including criminal, financial, and professional screening as determined by Company. Employee agrees to promptly disclose any arrests, convictions, or professional sanctions occurring during employment. Adverse findings may result in immediate termination.",
+          "legal_justification": "Ongoing screening authorization with disclosure obligations and termination provisions for adverse findings."
+        }
+      }
+    }
+  }
+}job_title_and_duties": {
+      "category": "employment_terms", 
+      "title": "Position and Duties",
+      "variations": {
+        "basic_role": {
+          "risk_level": "low",
+          "legal_stance": "neutral",
+          "clause": "Employee shall serve as [Job Title] and perform the duties customarily associated with that role, together with other duties reasonably assigned by the Company.",
+          "legal_justification": "Basic role definition with reasonable duty expansion to maintain operational flexibility."
+        },
+        "flexible_duties": {
+          "risk_level": "moderate", 
+          "legal_stance": "pro_employer",
+          "clause": "Employee shall serve as [Job Title] and perform all duties customarily associated with that role, plus additional duties, responsibilities, and projects as assigned by Company management from time to time. Employee's role may evolve based on business needs, and Employee agrees to adapt to changing requirements and cross-functional responsibilities.",
+          "legal_justification": "Broad duty assignment authority protects against claims of constructive dismissal during role changes."
+        },
+        "executive_comprehensive": {
+          "risk_level": "high",
+          "legal_stance": "pro_employer", 
+          "clause": "Employee shall serve as [Job Title] with full authority and responsibility for [Department/Function]. Employee shall devote Employee's full business time, attention, and energies exclusively to Company's business and shall not engage in any other business activity that conflicts with or detracts from Employee's duties hereunder. Employee's duties include strategic planning, operational oversight, team leadership, and such other executive responsibilities as may be designated by the Board of Directors or Chief Executive Officer.",
+          "legal_justification": "Executive-level commitment clause with exclusivity provisions and board-level authority delegation."
+        }
+      }
+    },
     "at_will_employment": {
       "category": "core",
       "title": "At-Will Employment",
