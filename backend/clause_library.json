@@ -82,7 +82,7 @@
     "expense_reimbursement": {
       "category": "employment_terms",
       "title": "Expense Reimbursement",
-      "clause": "The Company shall reimburse Employee for all reasonable and necessary expenses incurred in the course of employment, provided such expenses are approved in advance and substantiated with appropriate documentation.",
+      "clause": "The Company shall reimburse Employee for all reasonable and necessary expenses incurred in the course of employment, provided such expenses are approved in advance and substantiated with appropriate documentation. Employer will process approved reimbursement requests within 30 days of receipt of proper documentation.",
       "legal_justification": "California Labor Code § 2802 requires reimbursement of necessary expenditures incurred in direct consequence of duties.",
       "last_updated": "2025-07-28"
     },
@@ -110,7 +110,7 @@
     "confidentiality": {
       "category": "restrictive_covenants",
       "title": "Confidentiality and Non-Disclosure",
-      "clause": "During employment, Employee will have access to Company's confidential and proprietary information, including trade secrets, customer lists, financial data, and business strategies ('Confidential Information'). Employee agrees to hold all Confidential Information in strict confidence and not to disclose or use it, except for the sole benefit of the Company, both during and after employment. This obligation does not restrict Employee's right to use general skills and knowledge acquired during employment.",
+      "clause": "During employment, Employee will have access to Company's confidential and proprietary information, including trade secrets, customer lists, financial data, and business strategies ('Confidential Information'). Employee agrees to hold all Confidential Information in strict confidence and not to disclose or use it, except for the sole benefit of the Company, both during and after employment. These obligations continue indefinitely after termination until the information becomes publicly available through no fault of Employee. This obligation does not restrict Employee's right to use general skills and knowledge acquired during employment.",
       "legal_justification": "California Uniform Trade Secrets Act (Civil Code § 3426 et seq.) protects legitimate business interests without imposing a de facto non‑compete.",
       "last_updated": "2025-07-28"
     },
@@ -124,7 +124,7 @@
     "ip_assignment": {
       "category": "intellectual_property",
       "title": "Intellectual Property Assignment and Disclosure",
-      "clause": "Employee agrees to promptly disclose and assign to Company all rights, title, and interest in and to any inventions, discoveries, designs, developments, methods, modifications, improvements, ideas, know-how, data, processes, and trade secrets, whether or not patentable or copyrightable, made or conceived by Employee, either alone or jointly with others, during the period of employment, that (a) relate to the Company's business or actual or demonstrably anticipated research and development, or (b) result from any work performed by Employee for the Company. Employee acknowledges receipt of the 'Notice of Employee Rights Concerning Inventions' as required by California Labor Code § 2870, which is attached as Exhibit A to this Agreement and incorporated herein by reference.",
+      "clause": "Employee assigns to Company all inventions and works of authorship that are conceived, developed, or reduced to practice using Company's equipment, supplies, facilities, trade secrets, or confidential information, or that relate directly to the Company's business or demonstrably anticipated research or development. Employee acknowledges receipt of the 'Notice of Employee Rights Concerning Inventions' as required by California Labor Code § 2870, which is attached as Exhibit A to this Agreement and incorporated herein by reference.",
       "legal_justification": "California Labor Code § 2870 requires notice regarding employee inventions developed on personal time without employer resources; clause ensures compliance via Exhibit A.",
       "last_updated": "2025-07-28"
     },
@@ -138,7 +138,7 @@
     "background_check_consent": {
       "category": "compliance",
       "title": "Background Check Consent",
-      "clause": "Employee consents to a background check conducted in accordance with the Fair Credit Reporting Act and California's Investigative Consumer Reporting Agencies Act. Results may be used in employment decisions consistent with applicable law.",
+      "clause": "Employee consents to a background check conducted in accordance with the Fair Credit Reporting Act and California's Investigative Consumer Reporting Agencies Act. Results may be used in employment decisions consistent with applicable law. Employee has the right to request a copy of any consumer report used, and to dispute the accuracy or completeness of any information under the Fair Credit Reporting Act and California's ICRAA.",
       "legal_justification": "FCRA (15 U.S.C. § 1681 et seq.) and ICRAA (Cal. Civ. Code § 1786 et seq.) govern procurement and use of consumer reports.",
       "last_updated": "2025-07-28"
     },
@@ -159,7 +159,7 @@
     "arbitration": {
       "category": "dispute_resolution",
       "title": "Mutual Arbitration Agreement",
-      "clause": "Except as otherwise provided herein, any and all disputes, claims, or controversies arising out of or relating to Employee's employment with Company, or the termination thereof, shall be resolved by final and binding arbitration. The arbitration shall be conducted by [Arbitration Provider, e.g., JAMS] in [Specify County, e.g., Los Angeles County], California, in accordance with its Employment Arbitration Rules & Procedures. The parties agree to adequate discovery, that the arbitrator shall have the authority to award all remedies otherwise available in court, and that Company shall pay all costs unique to arbitration. This agreement does not apply to claims for workers' compensation, unemployment insurance benefits, or claims that are non‑arbitrable as a matter of law.",
+      "clause": "Except as otherwise provided herein, any and all disputes, claims, or controversies arising out of or relating to Employee's employment with Company, or the termination thereof, shall be resolved by final and binding arbitration. The arbitration shall be conducted by [Arbitration Provider, e.g., JAMS] in [Specify County, e.g., Los Angeles County], California, in accordance with its Employment Arbitration Rules & Procedures. The parties agree to adequate discovery, that the arbitrator shall have the authority to award all remedies otherwise available in court, and that Employer will pay arbitration-only administrative and arbitrator costs. Statutory fee-shifting rules remain in effect; either party may recover attorneys' fees and costs if prevailing under applicable law. This agreement does not apply to claims for workers' compensation, unemployment insurance benefits, or claims that are non‑arbitrable as a matter of law.",
       "legal_justification": "*Armendariz* requires mutuality, adequate discovery, cost allocation, and availability of statutory remedies for enforceability in CA.",
       "last_updated": "2025-07-28",
       "options": [
@@ -178,7 +178,7 @@
     "governing_law": {
       "category": "general_provisions",
       "title": "Governing Law and Jurisdiction",
-      "clause": "This Agreement shall be governed by and construed in accordance with the laws of the State of California, without regard to its conflict of laws principles. Any disputes arising under or related to this Agreement shall be resolved exclusively in the state or federal courts located in [Specify County, e.g., Los Angeles County], California, or through arbitration as specified herein.",
+      "clause": "California law governs this Agreement, without regard to its conflict of laws principles. For claims not subject to arbitration, the exclusive venue will be the state and federal courts located in [Specify County, e.g., Los Angeles County], California. Claims subject to arbitration shall be resolved through arbitration as specified herein.",
       "legal_justification": "California Labor Code § 925 generally prohibits requiring California employees to litigate or arbitrate outside of California.",
       "last_updated": "2025-07-28"
     },
