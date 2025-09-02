@@ -39,6 +39,41 @@ const ContractForm = () => {
     }));
   };
 
+  const contractTemplates = [
+    {
+      name: "Standard Full-Time Employee",
+      description: "Comprehensive employment agreement for full-time positions",
+      requirements: "Full-time software developer position, $85,000 annual salary, standard benefits including health insurance and 401k matching, 15 days PTO, standard confidentiality and IP assignment clauses, at-will employment, remote work allowed 2 days per week."
+    },
+    {
+      name: "Senior Executive",
+      description: "Executive-level employment with enhanced terms",
+      requirements: "Senior executive position, $150,000+ annual salary, executive benefits package, equity compensation, 4 weeks PTO, enhanced confidentiality provisions, 90-day notice period, severance provisions."
+    },
+    {
+      name: "Remote Worker",
+      description: "Employment agreement optimized for remote work",
+      requirements: "Remote software developer position, $80,000 annual salary, home office expense reimbursement, internet and phone allowances, standard benefits, flexible working hours, results-focused performance metrics."
+    },
+    {
+      name: "Part-Time Employee",
+      description: "Part-time employment with prorated benefits",
+      requirements: "Part-time position (20 hours/week), $35/hour rate, prorated benefits eligibility, flexible scheduling, standard confidentiality clauses, at-will employment."
+    },
+    {
+      name: "Contract-to-Hire",
+      description: "Initial contract period with potential for full-time conversion",
+      requirements: "6-month contract position with conversion opportunity, $75,000 annual equivalent, limited benefits during contract period, full benefits upon conversion, performance milestones for conversion evaluation."
+    }
+  ];
+
+  const applyTemplate = (template) => {
+    setFormData(prev => ({
+      ...prev,
+      requirements: template.requirements
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -144,6 +179,8 @@ const ContractForm = () => {
             contract: data.contract,
             metadata: data.metadata,
             contractType: "Enhanced Employment Agreement",
+            clientName: userInput.parameters.clientName || userInput.parameters["Company Name"],
+            otherPartyName: userInput.parameters.otherPartyName || userInput.parameters["Employee Name"],
             version: "enhanced"
           }
         });
@@ -290,6 +327,25 @@ const ContractForm = () => {
 
                 <div>
                   <Label htmlFor="requirements">Contract Requirements *</Label>
+                  
+                  {/* Template Selection */}
+                  <div className="mt-2 mb-4">
+                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Quick Start Templates</Label>
+                    <div className="grid md:grid-cols-2 gap-2">
+                      {contractTemplates.map((template, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => applyTemplate(template)}
+                          className="p-3 text-left border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
+                        >
+                          <div className="font-medium text-sm text-gray-900">{template.name}</div>
+                          <div className="text-xs text-gray-600 mt-1">{template.description}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <Textarea
                     id="requirements"
                     value={formData.requirements}

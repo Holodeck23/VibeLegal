@@ -5,6 +5,8 @@ import { AuthContext } from '../App';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Plus, 
   FileText, 
@@ -12,7 +14,9 @@ import {
   TrendingUp,
   Clock,
   CheckCircle,
-  Trash2
+  Trash2,
+  Search,
+  Filter
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -25,6 +29,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, title }
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
 
   useEffect(() => {
     fetchContracts();
@@ -104,11 +110,22 @@ const Dashboard = () => {
   const getContractTypeColor = (type) => {
     const colors = {
       'Employment Agreement': 'bg-blue-100 text-blue-800',
-      'CA Employment Agreement': 'bg-green-100 text-green-800'
+      'CA Employment Agreement': 'bg-green-100 text-green-800',
+      'Enhanced Employment Agreement': 'bg-purple-100 text-purple-800'
     };
 
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
+
+  // Filter and search contracts
+  const filteredContracts = contracts.filter(contract => {
+    const matchesSearch = contract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         contract.contract_type.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'all' || contract.contract_type === filterType;
+    return matchesSearch && matchesType;
+  });
+
+  const contractTypes = ['all', ...new Set(contracts.map(c => c.contract_type))];
 
 
   const stats = [
@@ -249,6 +266,34 @@ const Dashboard = () => {
               </Link>
 
             </div>
+            
+            {/* Search and Filter */}
+            {contracts.length > 0 && (
+              <div className="flex gap-4 mt-4">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search contracts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-48">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contractTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        {type === 'all' ? 'All Types' : type}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -280,7 +325,13 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {contracts.map((contract) => (
+                {filteredContracts.length === 0 && contracts.length > 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Search className="h-8 w-8 mx-auto mb-2" />
+                    <p>No contracts match your search criteria</p>
+                  </div>
+                ) : (
+                  filteredContracts.map((contract) => (
                   <div
                     key={contract.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -327,7 +378,8 @@ const Dashboard = () => {
                     </div>
 
                   </div>
-                ))}
+                  ))
+                )}
 
 
               </div>
