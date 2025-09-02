@@ -18,6 +18,10 @@ import {
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const [contracts, setContracts] = useState([]);
+  const [contractStats, setContractStats] = useState({
+    totalCount: 0,
+    monthlyCount: 0
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, title }
@@ -40,6 +44,10 @@ const Dashboard = () => {
 
       if (response.ok) {
         setContracts(data.contracts);
+        setContractStats({
+          totalCount: data.totalCount || 0,
+          monthlyCount: data.monthlyCount || 0
+        });
       } else {
         setError(data.error || 'Failed to fetch contracts');
       }
@@ -64,6 +72,10 @@ const Dashboard = () => {
 
       if (response.ok) {
         setContracts(contracts.filter(contract => contract.id !== contractId));
+        setContractStats(prev => ({
+          totalCount: Math.max(0, prev.totalCount - 1),
+          monthlyCount: Math.max(0, prev.monthlyCount - 1) // Assumes deleted contract was from this month
+        }));
         setDeleteConfirm(null);
       } else {
         setError(data.error || 'Failed to delete contract');
@@ -99,13 +111,13 @@ const Dashboard = () => {
   const stats = [
     {
       title: 'Total Contracts',
-      value: contracts.length,
+      value: contractStats.totalCount,
       icon: <FileText className="h-6 w-6 text-blue-600" />,
       description: 'Contracts created'
     },
     {
       title: 'This Month',
-      value: user?.contracts_used_this_month || 0,
+      value: contractStats.monthlyCount,
       icon: <Calendar className="h-6 w-6 text-green-600" />,
       description: 'Contracts generated'
     },
@@ -189,7 +201,7 @@ const Dashboard = () => {
         </div>
 
         {/* Usage Limit Warning */}
-        {user?.subscription_tier === 'basic' && user?.contracts_used_this_month >= 20 && (
+        {user?.subscription_tier === 'basic' && contractStats.monthlyCount >= 20 && (
           <div className="mb-8">
             <Card className="bg-yellow-50 border-yellow-200">
               <CardContent className="p-6">
@@ -200,7 +212,7 @@ const Dashboard = () => {
                       Approaching Monthly Limit
                     </h3>
                     <p className="text-yellow-700">
-                      You've used {user.contracts_used_this_month} of 25 contracts this month. 
+                      You've used {contractStats.monthlyCount} of 25 contracts this month. 
                       Consider upgrading to Premium for unlimited contracts.
                     </p>
 
