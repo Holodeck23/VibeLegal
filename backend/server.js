@@ -334,18 +334,39 @@ app.delete('/api/contracts/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// List user contracts
+// List user contracts with accurate counts
 app.get('/api/user-contracts', authenticateToken, async (req, res) => {
   try {
-    const result = await timedQuery(
-      `SELECT id, title, contract_type, created_at
-       FROM contracts
-       WHERE user_id = $1
-       ORDER BY created_at DESC`,
-      [req.user.userId],
-      'contracts_list_by_user'
-    );
-    res.json({ contracts: result.rows });
+    const [contractsResult, totalCountResult, monthlyCountResult] = await Promise.all([
+      timedQuery(
+        `SELECT id, title, contract_type, created_at
+         FROM contracts
+         WHERE user_id = $1
+         ORDER BY created_at DESC`,
+        [req.user.userId],
+        'contracts_list_by_user'
+      ),
+      timedQuery(
+        `SELECT COUNT(*) as total_count
+         FROM contracts
+         WHERE user_id = $1`,
+        [req.user.userId],
+        'contracts_total_count'
+      ),
+      timedQuery(
+        `SELECT COUNT(*) as monthly_count
+         FROM contracts
+         WHERE user_id = $1 AND created_at >= date_trunc('month', CURRENT_DATE)`,
+        [req.user.userId],
+        'contracts_monthly_count'
+      )
+    ]);
+
+    res.json({ 
+      contracts: contractsResult.rows,
+      totalCount: parseInt(totalCountResult.rows[0].total_count),
+      monthlyCount: parseInt(monthlyCountResult.rows[0].monthly_count)
+    });
   } catch (error) {
     console.error('Get contracts error:', error);
     res.status(500).json({ error: 'Failed to retrieve contracts' });
