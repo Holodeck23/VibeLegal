@@ -66,11 +66,11 @@
       "last_updated": "2025-07-28"
     },
     "meal_rest_breaks_ack": {
-      "category": "compliance",
+      "category": "compliance", 
       "title": "Meal and Rest Periods",
-      "clause": "The Company provides meal and rest periods in accordance with California law and applicable Industrial Welfare Commission Wage Orders. Employee agrees to accurately record all time worked and to notify the Company if unable to take a compliant meal or rest period.",
-      "legal_justification": "Acknowledges obligations under IWC Wage Orders and supports compliance defense regarding premiums and scheduling.",
-      "last_updated": "2025-07-28"
+      "clause": "The Company provides meal and rest periods in accordance with California law and applicable Industrial Welfare Commission Wage Orders. Non-exempt employees are entitled to a 30-minute meal period for shifts over 5 hours and 10-minute rest periods for each 4-hour work period. If Employee is unable to take a compliant meal or rest period due to business necessity, Employee will receive premium pay of one additional hour at the regular rate of pay for each missed meal or rest period as required by Labor Code § 226.7. Employee agrees to accurately record all time worked and immediately notify the Company of any missed meal or rest periods.",
+      "legal_justification": "Acknowledges IWC Wage Order obligations and includes mandatory premium pay requirements under Labor Code § 226.7 for missed meal or rest periods.",
+      "last_updated": "2025-09-02"
     },
     "timekeeping_attestation": {
       "category": "employment_terms",
@@ -87,11 +87,11 @@
       "last_updated": "2025-07-28"
     },
     "expense_reimbursement_remote": {
-      "category": "employment_terms",
+      "category": "employment_terms", 
       "title": "Expense Reimbursement—Remote/Hybrid Work",
-      "clause": "The Company will reimburse necessary business expenses reasonably incurred, which may include a reasonable portion of mobile phone, home internet, and other remote‑work costs, subject to timely submission of documentation and compliance with Company policy.",
-      "legal_justification": "Interprets § 2802 and case law to include certain remote‑work costs as necessary business expenses.",
-      "last_updated": "2025-07-28"
+      "clause": "The Company will reimburse necessary business expenses reasonably incurred, which may include a reasonable portion of mobile phone, home internet, and other remote work costs as required by Labor Code § 2802. For BYOD (bring your own device) and home internet usage, Employee may be reimbursed for the reasonable percentage of costs attributable to business use, consistent with Cochran v. Schwan's Home Service. Employee must submit documentation and receipts for reimbursement within 30 days of incurring the expense.",
+      "legal_justification": "Complies with Labor Code § 2802 and Cochran decision requiring reimbursement for employee use of personal devices and home internet for business purposes.",
+      "last_updated": "2025-09-02"
     },
     "anti_discrimination_harassment": {
       "category": "compliance",
@@ -144,10 +144,10 @@
     },
     "ban_the_box_timing": {
       "category": "compliance",
-      "title": "Background Check Timing and Process",
-      "clause": "Any background check will be conducted consistent with applicable law, including timing after a conditional offer, individualized assessment of any criminal history, and required pre‑adverse and adverse action notices, as applicable.",
-      "legal_justification": "California fair‑chance (ban‑the‑box) requirements add timing and process obligations beyond FCRA/ICRAA.",
-      "last_updated": "2025-07-28"
+      "title": "Fair Chance Act Background Check Process",
+      "clause": "In compliance with California Government Code § 12952 (Fair Chance Act), any criminal background check will be conducted only after a conditional offer of employment. Company will conduct an individualized assessment of any criminal conviction considering: (1) nature and gravity of offense; (2) time elapsed since conviction; and (3) nature of the job sought. Employee will receive written notice before any adverse action and opportunity to respond with evidence of rehabilitation or inaccuracies. Required pre-adverse and adverse action notices will be provided per FCRA requirements.",
+      "legal_justification": "Full compliance with California Fair Chance Act timing, individualized assessment, and notice requirements beyond basic FCRA obligations.",
+      "last_updated": "2025-09-02"
     },
     "immigration_compliance": {
       "category": "compliance",
@@ -170,10 +170,10 @@
     },
     "paga_arbitration_notice": {
       "category": "dispute_resolution",
-      "title": "PAGA Representative Action Carve-Out",
-      "clause": "This arbitration agreement does not apply to representative claims brought under the Private Attorneys General Act of 2004 (PAGA) that are non‑waivable as a matter of law. To the extent any PAGA claim for civil penalties is determined to be non‑arbitrable or non‑waivable, it shall be stayed pending the outcome of any arbitrable individual claims.",
-      "legal_justification": "*Iskanian* and *Viking River* create complex landscape for PAGA waivers; clause preserves enforceability by carving out non‑waivable claims.",
-      "last_updated": "2025-07-28"
+      "title": "PAGA Representative Action Carve-Out", 
+      "clause": "This arbitration agreement does not apply to representative claims brought under the Private Attorneys General Act of 2004 (PAGA) that are non-waivable as a matter of law. Following Adolph v. Uber Technologies, Inc., to the extent any PAGA claim includes both individual and non-individual claims, the individual PAGA claims may be compelled to arbitration while non-individual claims remain in court. Any non-arbitrable PAGA claims shall be stayed pending the outcome of arbitrable individual claims where appropriate.",
+      "legal_justification": "Post-Adolph v. Uber jurisprudence allows bifurcation of individual vs. representative PAGA claims; clause preserves arbitration agreement enforceability.",
+      "last_updated": "2025-09-02"
     },
     "governing_law": {
       "category": "general_provisions",

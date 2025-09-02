@@ -108,8 +108,8 @@
         "comprehensive_exempt": {
           "risk_level": "high",
           "legal_stance": "pro_employer",
-          "clause": "Employee is classified as exempt from overtime under California Labor Code § 515 and federal Fair Labor Standards Act as an executive, administrative, or professional employee. Employee acknowledges earning above the minimum salary threshold and possessing the requisite discretionary authority. Employee waives any claim to overtime, double-time, rest break premiums, or meal period compensation, understanding that exempt status requires occasional work beyond normal business hours.",
-          "legal_justification": "Comprehensive exempt employee acknowledgment with waiver provisions and salary threshold confirmation."
+          "clause": "Employee is classified as exempt from overtime under California Labor Code § 515 and federal Fair Labor Standards Act as an executive, administrative, or professional employee. Employee acknowledges earning above the 2025 minimum salary threshold of $68,640 annually ($5,720 monthly, $1,320 weekly) as required by California Department of Industrial Relations wage orders. Employee possesses requisite discretionary authority and meets all exemption criteria. Employee waives any claim to overtime, double-time, rest break premiums, or meal period compensation, understanding that exempt status requires occasional work beyond normal business hours.",
+          "legal_justification": "2025-compliant exempt employee acknowledgment with current California DIR salary thresholds and comprehensive waiver provisions."
         }
       }
     },
@@ -192,8 +192,8 @@
         "california_minimum": {
           "risk_level": "low",
           "legal_stance": "pro_employee",
-          "clause": "Employee shall accrue paid sick leave at the rate of one hour for every 30 hours worked, with a minimum of 24 hours (3 days) available annually as required by California Labor Code § 245 et seq. Unused sick leave may be carried forward to subsequent years up to a cap of 48 hours.",
-          "legal_justification": "Complies with California's minimum paid sick leave requirements with employee-favorable carryforward provisions."
+          "clause": "Employee shall accrue paid sick leave at the rate of one hour for every 30 hours worked, with a minimum of 40 hours (5 days) available annually as required by California Labor Code § 245 et seq. and SB 616 (effective January 1, 2024). Employee may use accrued sick leave beginning on the 90th day of employment. Unused sick leave may be carried forward to subsequent years up to a cap of 80 hours, and Employee may use up to 40 hours per year.",
+          "legal_justification": "Full compliance with SB 616 amendments increasing minimum paid sick leave from 24 to 40 hours annually, with updated carryforward caps."
         },
         "enhanced_sick_leave": {
           "risk_level": "moderate",
@@ -528,20 +528,20 @@
         "california_compliant": {
           "risk_level": "low",
           "legal_stance": "pro_employee",
-          "clause": "Employee acknowledges that California Business and Professions Code § 16600 prohibits non-competition agreements. Employee agrees not to use Company's confidential information to compete unfairly or solicit Company's employees for [6] months after termination.",
-          "legal_justification": "California-compliant approach focusing on trade secret protection and limited non-solicitation rather than prohibited non-compete."
+          "clause": "Employee acknowledges that California Business and Professions Code § 16600 prohibits non-competition agreements. Following Edwards v. Arthur Andersen and AMN Healthcare precedent, Employee agrees solely not to use or disclose Company's trade secrets as defined by Civil Code § 3426.1 to compete unfairly. No restrictions on Employee's right to work for competitors or solicit employees.",
+          "legal_justification": "Post-Edwards/AMN compliant approach limiting restrictions to trade secret protection only, avoiding unenforceable solicitation restraints."
         },
         "non_solicitation_focus": {
-          "risk_level": "moderate",
+          "risk_level": "moderate", 
           "legal_stance": "neutral",
-          "clause": "While California law prohibits restraints on Employee's right to engage in lawful profession, Employee agrees for [12] months after termination not to: (a) directly solicit Company employees to leave their employment; (b) use Company's confidential customer information for competitive purposes; or (c) disclose trade secrets to competitors.",
-          "legal_justification": "Focused non-solicitation and trade secret protection within California's legal framework."
+          "clause": "Employee agrees not to use or disclose Company trade secrets (as defined by Civil Code § 3426.1) or confidential customer information obtained through employment for competitive purposes. This restriction is limited to protection of actual trade secrets and confidential information and does not restrict Employee's right to work in the same industry or general profession.",
+          "legal_justification": "Edwards/AMN compliant approach focusing solely on trade secret and confidential information protection, avoiding prohibited restraints on competition or solicitation."
         },
         "maximum_protection": {
           "risk_level": "high",
           "legal_stance": "pro_employer",
-          "clause": "Employee covenants that for [18] months following termination, Employee will not: (a) recruit, solicit, or hire Company employees or independent contractors; (b) contact Company customers or prospects using confidential information; (c) compete using Company trade secrets; or (d) interfere with Company's business relationships. Employee acknowledges these restrictions protect legitimate business interests and are reasonable in scope and duration.",
-          "legal_justification": "Comprehensive post-employment restrictions focusing on protectable interests while avoiding prohibited non-compete provisions under California law."
+          "clause": "⚠️ WARNING: This clause may be unenforceable under Edwards v. Arthur Andersen and AMN Healthcare decisions. Employee agrees not to use or disclose Company's actual trade secrets as defined by Civil Code § 3426.1. Any broader restrictions on competition, solicitation, or business relationships may violate Business and Professions Code § 16600 and are not recommended for California employment agreements.",
+          "legal_justification": "Warning clause indicating potential unenforceability of broad restrictive covenants post-Edwards/AMN Healthcare; recommends trade secret protection only."
         }
       }
     },
@@ -695,21 +695,21 @@
       "variations": {
         "employee_non_solicit": {
           "risk_level": "low",
-          "legal_stance": "neutral",
-          "clause": "Employee agrees not to solicit Company employees to terminate employment for [12] months after leaving Company.",
-          "legal_justification": "Limited employee non-solicitation protecting workforce stability."
+          "legal_stance": "neutral", 
+          "clause": "⚠️ NOTICE: Employee solicitation restrictions may be unenforceable under Edwards v. Arthur Andersen. Employee agrees not to use Company trade secrets in any future employment or competitive activity.",
+          "legal_justification": "Post-Edwards compliant approach avoiding potentially unenforceable employee solicitation restrictions."
         },
         "broad_non_solicit": {
           "risk_level": "moderate",
           "legal_stance": "pro_employer",
-          "clause": "For [18] months post-termination, Employee shall not solicit employees, contractors, customers, or vendors to cease or reduce business with Company.",
-          "legal_justification": "Broad non-solicitation covering multiple stakeholder groups."
+          "clause": "⚠️ ENFORCEABILITY RISK: Broad solicitation restrictions likely unenforceable under Edwards v. Arthur Andersen and AMN Healthcare. Consider limiting to trade secret protection only.",
+          "legal_justification": "Warning of enforceability risks for broad solicitation restrictions under current California law."
         },
         "comprehensive_non_solicit": {
-          "risk_level": "high",
+          "risk_level": "high", 
           "legal_stance": "pro_employer",
-          "clause": "Employee prohibited from directly or indirectly soliciting, recruiting, or hiring Company personnel or inducing customers/vendors to terminate relationships for [24] months. Includes passive participation in competitor recruitment.",
-          "legal_justification": "Maximum non-solicitation scope with indirect activity restrictions."
+          "clause": "⚠️ LIKELY UNENFORCEABLE: Comprehensive solicitation restrictions violate California Business and Professions Code § 16600 as interpreted in Edwards and AMN Healthcare cases. Not recommended for California employment agreements.",
+          "legal_justification": "Warning that comprehensive solicitation restrictions are likely unenforceable under current California precedent."
         }
       }
     },

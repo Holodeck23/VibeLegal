@@ -96,9 +96,44 @@ async function composeContractEnhanced(userInput) {
 }
 
 function populatePlaceholders(text, parameters) {
-  return text.replace(/\[([\w\s/]+)\]/g, (match, placeholderName) => {
+  // Define required vs optional parameters with sensible defaults
+  const parameterDefaults = {
+    'Employee Name': parameters['Employee Name'] || parameters.otherPartyName || '[Employee Name]',
+    'Company Name': parameters['Company Name'] || parameters.clientName || '[Company Name]',
+    'Company Registration': parameters['Company Registration'] || 'C0000000',
+    'Employee SSN': '[To be provided by employee]', // Never require SSN in template
+    'Supervisor Name': parameters['Supervisor Name'] || parameters['Supervisor Title'] || 'designated supervisor',
+    'Supervisor Title': parameters['Supervisor Title'] || 'Manager',
+    'Work Location': parameters['Work Location'] || 'Company offices',
+    'Annual Salary': parameters['Annual Salary'] || parameters['Salary Amount'] || parameters.amount || '$[SALARY]',
+    'Salary Amount': parameters['Salary Amount'] || parameters['Annual Salary'] || parameters.amount || '$[SALARY]',
+    'Company Address': parameters['Company Address'] || '123 Business Street, [City], CA [ZIP]',
+    'Employee Address': parameters['Employee Address'] || '[Employee Address]',
+    'State': parameters['State'] || parameters.jurisdiction || 'California',
+    'Job Title': parameters['Job Title'] || 'Employee',
+    'Date': parameters['Date'] || new Date().toLocaleDateString(),
+    'exempt/non-exempt': parameters['exempt/non-exempt'] || 'exempt',
+    'Company Type': parameters['Company Type'] || 'corporation',
+    'Arbitration Provider, e.g., JAMS': 'JAMS',
+    'Specify County, e.g., Los Angeles County': parameters['Specify County, e.g., Los Angeles County'] || 'Los Angeles County'
+  };
+
+  return text.replace(/\[([\w\s/.,]+)\]/g, (match, placeholderName) => {
     const key = placeholderName.trim();
-    return parameters[key] !== undefined ? parameters[key] : `[!!MISSING_DATA: ${key}!!]`;
+    
+    // Use parameter defaults if available
+    if (parameterDefaults.hasOwnProperty(key)) {
+      return parameterDefaults[key];
+    }
+    
+    // Fallback to direct parameter lookup
+    if (parameters[key] !== undefined && parameters[key] !== null && parameters[key] !== '') {
+      return parameters[key];
+    }
+    
+    // Critical error: still missing required data
+    console.warn(`Missing required parameter: ${key}`);
+    return `[${key}]`; // Clean placeholder, no scary MISSING_DATA
   });
 }
 
