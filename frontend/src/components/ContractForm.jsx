@@ -13,29 +13,23 @@ import { EnhancedContractBuilder } from './EnhancedContractBuilder';
 
 const ContractForm = () => {
   const [formData, setFormData] = useState({
-    contractType: '',
+    contractType: 'Employment Agreement',
     requirements: '',
     clientName: '',
     otherPartyName: '',
-    jurisdiction: ''
+    jurisdiction: 'California'
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   const [isEnhancedMode, setIsEnhancedMode] = useState(true);
+  // MVP: Limited to California Employment Contracts only
   const contractTypes = [
-    { value: 'Employment Agreement', label: 'Employment Agreement' },
-    { value: 'CA Employment Agreement', label: 'California Employment Agreement' }
+    { value: 'Employment Agreement', label: 'Employment Agreement' }
   ];
   const jurisdictions = [
-    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
-    'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
-    'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi',
-    'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico',
-    'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania',
-    'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
-    'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+    'California'
   ];
 
   const handleInputChange = (field, value) => {
@@ -73,13 +67,24 @@ const ContractForm = () => {
             otherPartyName: formData.otherPartyName,
             "Employee Name": formData.otherPartyName,
             "Company Name": formData.clientName,
-            "State": "California",
+            "State": formData.jurisdiction,
             "Job Title": "Employee",
             "Supervisor Title": "Manager",
+            "Supervisor Name": "Manager",
             "Work Location": "Company offices and/or remote",
             "exempt/non-exempt": "exempt",
-            "amount": "competitive salary",
+            "Annual Salary": "$85,000",
+            "amount": "$85,000",
             "hour/year": "year",
+            "Salary Amount": "$85,000",
+            "Pay Period": "year",
+            "Company Type": "corporation",
+            "State of Incorporation": formData.jurisdiction,
+            "Company Address": "123 Business Street, City, " + formData.jurisdiction + " 12345",
+            "Employee Address": "456 Residential Avenue, City, " + formData.jurisdiction + " 67890",
+            "Company Registration": "C123456789",
+            "Employee SSN": "[To be provided by employee]",
+            "Date": new Date().toLocaleDateString(),
             "Arbitration Provider, e.g., JAMS": "JAMS",
             "Specify County, e.g., Los Angeles County": "Los Angeles County",
             title: formData.contractType,
@@ -104,6 +109,12 @@ const ContractForm = () => {
           }
         });
       } else {
+        // If token is expired, redirect to login
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return;
+        }
         setError(data.error || 'Failed to generate contract');
       }
     } catch (err) {
@@ -137,6 +148,12 @@ const ContractForm = () => {
           }
         });
       } else {
+        // If token is expired, redirect to login
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return;
+        }
         setError(data.error || "Failed to generate enhanced contract");
       }
     } catch (err) {
@@ -294,7 +311,7 @@ const ContractForm = () => {
                     </p>
                   </div>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Example for Service Contract:</p>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Example for Employment Agreement:</p>
                     <p className="text-sm text-gray-600 italic">
                       "Web development services, 3-month project duration, $5,000 total fee paid in 3 installments, 
                       includes website design and development, 2 rounds of revisions, client provides content, 

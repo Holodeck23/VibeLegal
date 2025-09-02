@@ -17,8 +17,7 @@ const config = {
   CONTRACT_TYPES: [
     { value: 'Employment Agreement', label: 'Employment Agreement' },
     { value: 'CA Employment Agreement', label: 'California Employment Agreement' }
-  ],  
-  // US States for jurisdiction selection
+  ],  // US States for jurisdiction selection
   US_STATES: [
     'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
     'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',
