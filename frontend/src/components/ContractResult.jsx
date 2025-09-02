@@ -31,6 +31,7 @@ const ContractResult = () => {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [contractSections, setContractSections] = useState([]);
+  const [metadata, setMetadata] = useState(null);
 
   useEffect(() => {
     if (!location.state || !location.state.contract) {
@@ -38,9 +39,10 @@ const ContractResult = () => {
       return;
     }
 
-    const { contract, contractType, clientName, otherPartyName } = location.state;
+    const { contract, contractType, clientName, otherPartyName, metadata } = location.state;
     setContractContent(contract);
     setContractTitle(`${contractType} - ${clientName} & ${otherPartyName}`);
+    setMetadata(metadata || null);
     
     // Parse contract into sections for easier editing
     parseContractSections(contract);
@@ -354,6 +356,49 @@ Please provide an improved version of this section only, maintaining legal accur
 
           {/* Actions Panel */}
           <div className="space-y-6">
+            {/* Enhanced Metadata Panel */}
+            {metadata && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="text-blue-900 flex items-center">
+                    <Wand2 className="mr-2 h-5 w-5" />
+                    Professional Generation Report
+                  </CardTitle>
+                  <CardDescription className="text-blue-700">
+                    Advanced contract generation with professional legal positioning
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white p-3 rounded border">
+                      <p className="text-sm font-medium text-gray-700">Risk Profile</p>
+                      <p className="text-lg font-bold text-blue-600 capitalize">{metadata.risk_profile}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded border">
+                      <p className="text-sm font-medium text-gray-700">Legal Stance</p>
+                      <p className="text-lg font-bold text-blue-600 capitalize">{metadata.legal_stance?.replace('_', '-')}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white p-3 rounded border">
+                      <p className="text-sm font-medium text-green-700">Enhanced Clauses</p>
+                      <p className="text-lg font-bold text-green-600">{metadata.enhanced_clauses_used}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded border">
+                      <p className="text-sm font-medium text-gray-700">Standard Clauses</p>
+                      <p className="text-lg font-bold text-gray-600">{metadata.original_clauses_used}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white p-3 rounded border">
+                    <p className="text-sm font-medium text-gray-700">Contract Version</p>
+                    <p className="text-sm text-blue-600">{metadata.version} • {metadata.clause_count} total clauses</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Contract Details */}
             <Card>
               <CardHeader>

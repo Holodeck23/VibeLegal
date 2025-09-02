@@ -21,18 +21,12 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
     jurisdiction: 'California'
   });
 
+  // MVP: Limited to California Employment Contracts only
   const contractTypes = [
-    { value: 'Employment Agreement', label: 'Employment Agreement' },
-    { value: 'NDA', label: 'Non-Disclosure Agreement (NDA)' },
-    { value: 'Service Contract', label: 'Service Contract' },
-    { value: 'Independent Contractor', label: 'Independent Contractor Agreement' }
+    { value: 'Employment Agreement', label: 'Employment Agreement' }
   ];
-
   const jurisdictions = [
-    'California', 'New York', 'Texas', 'Florida', 'Illinois', 'Pennsylvania', 
-    'Ohio', 'Georgia', 'North Carolina', 'Michigan', 'New Jersey', 'Virginia',
-    'Washington', 'Arizona', 'Massachusetts', 'Tennessee', 'Indiana', 'Missouri',
-    'Maryland', 'Wisconsin', 'Colorado', 'Minnesota', 'South Carolina', 'Alabama'
+    'California'
   ];
 
   const handleGenerate = () => {
@@ -50,17 +44,24 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
         "Company Name": contractData.clientName,
         "State": contractData.jurisdiction,
         "Job Title": "Employee",
-        "Supervisor Title": "Manager",
+        "Supervisor Title": "Manager", 
+        "Supervisor Name": "Manager",
         "Work Location": "Company offices and/or remote",
         "exempt/non-exempt": "exempt",
-        "amount": "competitive salary",
+        "Annual Salary": "$85,000",
+        "amount": "$85,000",
         "hour/year": "year",
-        "Arbitration Provider, e.g., JAMS": "JAMS",
-        "Specify County, e.g., Los Angeles County": "Los Angeles County",
-        "Salary Amount": "competitive salary",
+        "Salary Amount": "$85,000",
         "Pay Period": "year",
         "Company Type": "corporation",
-        "Supervisor Name": "Manager",
+        "State of Incorporation": contractData.jurisdiction,
+        "Company Address": "123 Business Street, City, " + contractData.jurisdiction + " 12345",
+        "Employee Address": "456 Residential Avenue, City, " + contractData.jurisdiction + " 67890",
+        "Company Registration": "C123456789",
+        "Employee SSN": "[To be provided by employee]",
+        "Date": new Date().toLocaleDateString(),
+        "Arbitration Provider, e.g., JAMS": "JAMS",
+        "Specify County, e.g., Los Angeles County": "Los Angeles County",
         title: contractData.contractType,
         jurisdiction: contractData.jurisdiction,
         requirements: contractData.requirements
@@ -200,7 +201,7 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
                 </p>
               </div>
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-gray-700 mb-2">Example for Service Contract:</p>
+                <p className="text-sm font-medium text-gray-700 mb-2">Example for Employment Agreement:</p>
                 <p className="text-sm text-gray-600 italic">
                   "Web development services, 3-month project duration, $5,000 total fee paid in 3 installments, 
                   includes website design and development, 2 rounds of revisions, client provides content, 

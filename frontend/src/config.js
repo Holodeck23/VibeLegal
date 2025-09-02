@@ -16,13 +16,8 @@ const config = {
   // Supported contract types
   CONTRACT_TYPES: [
     { value: 'Employment Agreement', label: 'Employment Agreement' },
-    { value: 'NDA', label: 'Non-Disclosure Agreement (NDA)' },
-    { value: 'Service Contract', label: 'Service Contract' },
-    { value: 'Independent Contractor', label: 'Independent Contractor Agreement' },
-    { value: 'Purchase Agreement', label: 'Purchase Agreement' }
-  ],
-  
-  // US States for jurisdiction selection
+    { value: 'CA Employment Agreement', label: 'California Employment Agreement' }
+  ],  // US States for jurisdiction selection
   US_STATES: [
     'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware',
     'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky',

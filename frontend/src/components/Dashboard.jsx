@@ -41,6 +41,12 @@ const Dashboard = () => {
       if (response.ok) {
         setContracts(data.contracts);
       } else {
+        // If token is expired, redirect to login
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return;
+        }
         setError(data.error || 'Failed to fetch contracts');
       }
     } catch (err) {
@@ -86,10 +92,7 @@ const Dashboard = () => {
   const getContractTypeColor = (type) => {
     const colors = {
       'Employment Agreement': 'bg-blue-100 text-blue-800',
-      'NDA': 'bg-green-100 text-green-800',
-      'Service Contract': 'bg-purple-100 text-purple-800',
-      'Independent Contractor': 'bg-orange-100 text-orange-800',
-      'Purchase Agreement': 'bg-red-100 text-red-800'
+      'CA Employment Agreement': 'bg-green-100 text-green-800'
     };
 
     return colors[type] || 'bg-gray-100 text-gray-800';

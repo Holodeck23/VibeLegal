@@ -34,18 +34,16 @@ const LandingPage = () => {
     {
       icon: <FileText className="h-8 w-8 text-blue-600" />,
       title: "Multiple Contract Types",
-      description: "Support for employment agreements, NDAs, service contracts, and more."
+      description: "Specialized in employment agreements and employment-related legal documents."
     }
   ];
 
   const contractTypes = [
     "Employment Agreements",
     "Non-Disclosure Agreements (NDAs)",
-    "Service Contracts",
-    "Independent Contractor Agreements",
-    "Purchase Agreements"
+    "California Employment Agreements",
+    "Professional Employment Contracts"
   ];
-
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
