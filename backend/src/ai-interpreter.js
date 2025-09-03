@@ -151,7 +151,7 @@ router.post('/chat/message', async (req, res) => {
     );
 
     // Process message with AI if needed
-    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-flash' });
+    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
     
     // Enhanced conversational prompt for natural contract parameter extraction
     const conversationalPrompt = `You are an AI legal assistant helping extract contract parameters through natural conversation. 
@@ -231,37 +231,170 @@ router.post('/analyze-contract-requirements', async (req, res) => {
     const { userInput, conversationContext, analysisType } = req.body;
     const userId = req.user.id;
 
-    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-flash' });
+    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
     
-    // Build intelligent analysis prompt
-    const analysisPrompt = `You are an expert legal AI assistant specializing in employment contracts. Your role is to guide users through creating comprehensive, compliant employment contracts by:
+    // Check for force generation keywords
+    const forceGenerationKeywords = [
+      'generate', 'generate now', 'create contract', 'create the contract', 
+      'proceed with contract', 'finish', 'done', 'complete', 'that\'s enough',
+      'generate contract now', 'create it', 'proceed', 'move forward',
+      'let\'s generate', 'ready to generate', 'create now'
+    ];
+    
+    const shouldForceGenerate = forceGenerationKeywords.some(keyword => 
+      userInput.toLowerCase().includes(keyword.toLowerCase())
+    );
 
-1. Analyzing what they've provided vs. what's missing
-2. Identifying potential legal risks and compliance issues  
-3. Suggesting specific clauses, variations, or protective measures
-4. Ensuring nothing critical is overlooked
+    // Count conversation turns to prevent endless loops
+    const messages = conversationContext.messages || [];
+    const conversationTurns = Math.floor(messages.length / 2); // Divide by 2 for user/bot pairs
+    const maxTurns = 8; // Maximum 8 back-and-forth exchanges
+    const shouldAutoGenerate = conversationTurns >= maxTurns;
+
+    // Build intelligent analysis prompt with strategic employer protections focus
+    const analysisPrompt = `You are an expert employment law attorney and legal AI assistant specializing in comprehensive, employer-protective employment contracts. Your role is to guide users through creating strategic, compliant employment contracts by:
+
+1. **Strategic Analysis**: Analyze what they've provided vs. critical employer protections missing
+2. **Risk Assessment**: Identify potential legal risks, compliance issues, and vulnerabilities  
+3. **Protective Measures**: Suggest specific clauses for IP protection, non-compete, confidentiality, severance terms
+4. **Compliance Assurance**: Ensure California employment law compliance and best practices
+5. **Comprehensive Coverage**: Don't just collect basics - ensure strategic employer protections
+
+**STRATEGIC EMPLOYER PROTECTIONS TO IDENTIFY:**
+- IP assignment and invention clauses
+- Non-compete and non-solicitation terms (where legally enforceable)
+- Confidentiality and trade secret protection
+- Termination procedures and severance terms
+- Performance review processes and probation periods
+- PTO payout policies and accrual rules
+- Remote work security and equipment policies
+- Expense reimbursement timelines and procedures
+- Equity vesting schedules and treatment upon termination
+- Background check and reference requirements
+- Dispute resolution and arbitration clauses
+
+**CRITICAL INSTRUCTIONS:**
+- If user says words like "generate", "create contract", "proceed", "done", or similar - SET readyToGenerate to true
+- After 6+ exchanges, prioritize generation over more questions
+- Focus on strategic elements, not just basics - ask about protections they might not consider
+- Suggest protective clauses they haven't mentioned
+- Always consider California employment law requirements
 
 **Current conversation context:**
 ${JSON.stringify(conversationContext, null, 2)}
 
 **User's latest input:** "${userInput}"
+**Force generation requested:** ${shouldForceGenerate}
+**Conversation turns:** ${conversationTurns}/${maxTurns}
+**Should auto-generate:** ${shouldAutoGenerate}
 
-**Your task:** Analyze this input and respond with a JSON object containing:
+**Your task:** As a strategic employment law expert, analyze this input and respond with a JSON object containing:
 
 RESPOND ONLY WITH VALID JSON:
 {
-  "nextQuestion": "Your intelligent follow-up question or guidance",
-  "extractedInfo": {"key": "value"}, // Any contract parameters you can extract
-  "analysis": "Your analysis of what they've provided and what's needed",
-  "suggestions": ["Specific suggestion 1", "Specific suggestion 2"], 
-  "missingInfo": ["Missing element 1", "Missing element 2"],
-  "riskAssessment": "Any legal risks you identify",
-  "recommendedClauses": ["clause_id1", "clause_id2"],
+  "nextQuestion": "Your strategic legal guidance or intelligent follow-up question (or generation confirmation)",
+  "extractedInfo": {"key": "value"}, // Any contract parameters you can extract using comprehensive patterns
+  "analysis": "Your legal analysis of what they've provided, strategic gaps, and employer protection needs",
+  "suggestions": ["Strategic legal suggestion 1 with rationale", "Employer protection suggestion 2"], 
+  "missingInfo": ["Critical missing element 1", "Strategic protection gap 2"],
+  "riskAssessment": "Detailed legal risk analysis including compliance and strategic vulnerabilities",
+  "recommendedClauses": ["ip_assignment", "confidentiality_2_years", "performance_reviews", "severance_standard"],
   "recommendedRiskLevel": "conservative|moderate|aggressive", 
   "recommendedStance": "pro_employee|neutral|pro_employer",
-  "readyToGenerate": false, // Only true when you have enough for a complete contract
-  "contractParams": {} // Only include if readyToGenerate is true
+  "strategicProtections": ["Specific employer protection 1", "Legal safeguard 2"],
+  "complianceNotes": ["CA law requirement 1", "Employment standard 2"],
+  "readyToGenerate": ${shouldForceGenerate || shouldAutoGenerate}, // Force true if user requested or max turns reached
+  "contractParams": {
+    // When readyToGenerate is true, extract ALL available parameters from the conversation using the comprehensive Master Input Brief framework:
+    // CORE DETAILS:
+    // "Company Name": "extracted company name",
+    // "Client Name": "extracted company name (same as Company Name)",
+    // "Employee Name": "extracted employee name", 
+    // "Other Party Name": "extracted employee name (same as Employee Name)",
+    // "Job Title": "extracted job title/position",
+    // "Annual Salary": "$XX,XXX extracted salary amount",
+    // "Salary Amount": "numeric salary without $",
+    // "Hourly Rate": "$XX/hour if applicable",
+    // "Employment Type": "Full-time|Part-time|Contract",
+    // "Work Hours": "XX hours per week",
+    // "Start Date": "extracted start date",
+    // "Work Arrangement": "Remote|Hybrid|On-site details",
+    // "Work Location": "specific location or remote arrangement",
+    // "Reports To": "manager/supervisor name or title",
+    // 
+    // BENEFITS & COMPENSATION:
+    // "Health Insurance": "coverage details",
+    // "Dental Insurance": "dental coverage if mentioned",
+    // "Vision Insurance": "vision coverage if mentioned",
+    // "Retirement Benefits": "401k details with match %",
+    // "PTO Policy": "XX days/weeks paid time off",
+    // "Annual PTO Days": "numeric PTO amount",
+    // "Sick Leave": "sick leave policy",
+    // "Bonus Structure": "bonus details and %",
+    // "Equity Compensation": "stock options, shares, equity %",
+    // "Vesting Schedule": "equity vesting details",
+    // 
+    // EMPLOYMENT TERMS:
+    // "Probation Period": "XX days/months probationary period",
+    // "Probationary Period Length": "XX days/months",
+    // "Performance Reviews": "review schedule and process",
+    // "Notice Period": "termination notice requirements",
+    // "Severance Policy": "severance terms and duration",
+    // 
+    // LEGAL PROTECTIONS:
+    // "Confidentiality": "confidentiality requirements",
+    // "Confidentiality Duration": "duration of confidentiality post-termination",
+    // "IP Assignment": "intellectual property assignment details",
+    // "Non-Compete Period": "non-compete duration and scope",
+    // "Non-Compete": "non-compete restrictions",
+    // "Non-Solicitation Period": "non-solicitation duration",
+    // "Non-Solicitation": "non-solicitation restrictions",
+    // "Expense Reimbursement": "expense reimbursement policy and timeline",
+    // 
+    // JURISDICTION:
+    // "Governing Law": "California (default) or specified jurisdiction",
+    // "Jurisdiction": "legal jurisdiction for the contract"
+  }, // Include all available parameters if readyToGenerate is true
+  "suggestedClauses": ["Specific clause recommendations based on role and situation"],
+  "progressIndicator": "${shouldForceGenerate || shouldAutoGenerate ? '100' : Math.min(90, Math.round(15 + (conversationTurns / maxTurns) * 75))}% complete"
 }
+
+${shouldForceGenerate ? `**USER REQUESTED GENERATION - SET readyToGenerate to true and extract contractParams from conversation context**
+
+EXTRACT THESE PARAMETERS FROM THE CONVERSATION CONTEXT:
+${JSON.stringify(conversationContext, null, 2)}
+
+Look for and EXTRACT using Master Input Brief patterns:
+- Company/employer name and client details
+- Employee name and personal information  
+- Job title/position and reporting structure
+- Salary/compensation amount (annual, hourly, bonus)
+- Work location and arrangement (remote/office/hybrid)
+- Benefits mentioned (health, dental, vision, 401k, PTO, sick leave)
+- Employment terms (start date, probation, performance reviews)
+- Equity and stock options (shares, vesting schedule)
+- Legal protections (IP, confidentiality, non-compete, non-solicitation)
+- Termination terms (notice period, severance policy)
+- Expense reimbursement and work policies
+- Strategic employer protections discussed
+- Any other contract details, clauses, or requirements mentioned
+
+Use comprehensive pattern matching to extract maximum detail.
+` : ''}
+${shouldAutoGenerate ? `**MAX TURNS REACHED - SET readyToGenerate to true and extract contractParams from conversation**
+
+EXTRACT COMPREHENSIVE PARAMETERS using Master Input Brief framework from CONVERSATION: 
+${JSON.stringify(conversationContext, null, 2)}
+
+Apply strategic legal analysis to identify:
+1. All basic employment terms
+2. Compensation and benefits details  
+3. Strategic employer protection gaps
+4. California employment law compliance needs
+5. Risk mitigation clauses required
+6. Professional development and review processes
+7. Termination and post-employment restrictions
+` : ''}
 
 Focus on being an intelligent legal consultant, not a form-filler. Ask smart questions about gaps, suggest protective clauses they might not have considered, and ensure legal compliance.`;
 

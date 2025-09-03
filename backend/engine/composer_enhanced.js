@@ -36,7 +36,9 @@ function selectClauseVariation(clauseKey, preferences = {}, clauses) {
 
 async function composeContractEnhanced(userInput) {
   try {
-    console.log("🚀 Enhanced composer called with preferences:", userInput.preferences);
+    console.log("🚀 Master Input Brief Enhanced Composer with preferences:", userInput.preferences);
+    console.log("📊 Parameters received:", Object.keys(userInput.parameters || {}).length);
+    console.log("🎯 Key parameters:", Object.keys(userInput.parameters || {}).filter(k => userInput.parameters[k] && userInput.parameters[k] !== '').slice(0, 10));
     const enhancedClauses = JSON.parse(await fs.readFile(CLAUSES_ENHANCED_PATH, 'utf-8'));
     const originalClauses = JSON.parse(await fs.readFile(CLAUSES_ORIGINAL_PATH, 'utf-8'));
     const scaffold = JSON.parse(await fs.readFile(path.join(__dirname, '..', 'contract_employment_agreement.json'), 'utf-8'));
@@ -77,63 +79,171 @@ async function composeContractEnhanced(userInput) {
     return {
       content: contractBody,
       metadata: {
-        version: "enhanced_v3.0.0",
+        version: "enhanced_v3.0.0_master_input_brief",
         clause_count: scaffold.clauses.length,
-        risk_profile: userInput.preferences?.risk_tolerance || 'low',
+        risk_profile: userInput.preferences?.risk_tolerance || 'moderate',
         legal_stance: userInput.preferences?.legal_stance || 'neutral',
         enhanced_clauses_used: clauseMetadata.filter(c => c.source === 'enhanced').length,
         original_clauses_used: clauseMetadata.filter(c => c.source === 'original').length,
         clause_breakdown: clauseMetadata,
         jurisdiction: "California",
-        contract_type: "Employment Agreement"
+        contract_type: "Employment Agreement",
+        parameter_extraction: {
+          total_parameters_provided: Object.keys(parameters).filter(k => parameters[k] && parameters[k] !== '').length,
+          parameters_used: Object.keys(parameterDefaults).filter(k => 
+            parameters[k] && parameters[k] !== '' && !parameterDefaults[k].startsWith('[') 
+          ).length,
+          master_input_brief_coverage: Math.round(
+            (Object.keys(parameterDefaults).filter(k => 
+              parameters[k] && parameters[k] !== '' && !parameterDefaults[k].startsWith('[') 
+            ).length / Object.keys(parameterDefaults).length) * 100
+          ) + '%'
+        },
+        strategic_protections: {
+          confidentiality: !!(parameters['Confidentiality'] || parameters['Confidentiality Duration']),
+          ip_assignment: !!(parameters['IP Assignment']),
+          non_compete: !!(parameters['Non-Compete'] || parameters['Non-Compete Period']),
+          non_solicitation: !!(parameters['Non-Solicitation'] || parameters['Non-Solicitation Period']),
+          severance: !!(parameters['Severance Policy']),
+          equity_terms: !!(parameters['Equity Compensation'] || parameters['Vesting Schedule']),
+          probation_terms: !!(parameters['Probation Period'] || parameters['Probationary Period Length']),
+          performance_reviews: !!(parameters['Performance Reviews'])
+        }
       }
     };
   } catch (error) {
-    console.log('Enhanced system unavailable, using original');
+    console.error('❌ Enhanced Master Input Brief system error:', error);
+    console.log('🔄 Falling back to original composer');
     const { composeContract } = require('./composer.js');
-    return await composeContract(userInput);
+    const fallbackResult = await composeContract(userInput);
+    return {
+      content: fallbackResult,
+      metadata: {
+        version: "fallback_original",
+        error: "Enhanced system unavailable",
+        fallback_used: true
+      }
+    };
   }
 }
 
 function populatePlaceholders(text, parameters) {
-  // Define required vs optional parameters with sensible defaults
+  // Master Input Brief Parameter Defaults - Comprehensive parameter mapping
   const parameterDefaults = {
-    'Employee Name': parameters['Employee Name'] || parameters.otherPartyName || '[Employee Name]',
-    'Company Name': parameters['Company Name'] || parameters.clientName || '[Company Name]',
+    // CORE EMPLOYMENT DETAILS
+    'Employee Name': parameters['Employee Name'] || parameters['Other Party Name'] || parameters.otherPartyName || '[Employee Name]',
+    'Other Party Name': parameters['Other Party Name'] || parameters['Employee Name'] || parameters.otherPartyName || '[Employee Name]',
+    'Company Name': parameters['Company Name'] || parameters['Client Name'] || parameters.clientName || '[Company Name]',
+    'Client Name': parameters['Client Name'] || parameters['Company Name'] || parameters.clientName || '[Company Name]',
+    'Job Title': parameters['Job Title'] || parameters.jobTitle || 'Employee',
+    'Reports To': parameters['Reports To'] || parameters.reportsTo || 'designated supervisor',
+    'Supervisor Name': parameters['Supervisor Name'] || parameters['Reports To'] || 'designated supervisor',
+    'Supervisor Title': parameters['Supervisor Title'] || 'Manager',
+    
+    // COMPENSATION & BENEFITS
+    'Annual Salary': parameters['Annual Salary'] || parameters['Salary Amount'] || parameters.amount || '$85,000',
+    'Salary Amount': parameters['Salary Amount'] || parameters['Annual Salary'] || parameters.amount || '$85,000', 
+    'Hourly Rate': parameters['Hourly Rate'] || parameters.hourlyRate || '$40.00/hour',
+    'Employment Type': parameters['Employment Type'] || 'Full-time',
+    'Work Hours': parameters['Work Hours'] || '40 hours per week',
+    'Bonus Structure': parameters['Bonus Structure'] || parameters.bonus || 'Performance-based bonus eligibility',
+    'Equity Compensation': parameters['Equity Compensation'] || parameters.equity || '',
+    'Vesting Schedule': parameters['Vesting Schedule'] || parameters.vesting || '',
+    
+    // BENEFITS DETAILS
+    'Health Insurance': parameters['Health Insurance'] || 'Comprehensive health insurance coverage',
+    'Dental Insurance': parameters['Dental Insurance'] || parameters.dental || '',
+    'Vision Insurance': parameters['Vision Insurance'] || parameters.vision || '',
+    'Retirement Benefits': parameters['Retirement Benefits'] || '401(k) plan with company matching',
+    'PTO Policy': parameters['PTO Policy'] || parameters['Annual PTO Days'] || '15 days paid time off annually',
+    'Annual PTO Days': parameters['Annual PTO Days'] || parameters['PTO Policy'] || '15',
+    'Sick Leave': parameters['Sick Leave'] || 'Accrued sick leave per California law',
+    
+    // EMPLOYMENT TERMS
+    'Start Date': parameters['Start Date'] || new Date().toLocaleDateString(),
+    'Probation Period': parameters['Probation Period'] || parameters['Probationary Period Length'] || '90 days',
+    'Probationary Period Length': parameters['Probationary Period Length'] || parameters['Probation Period'] || '90 days',
+    'Performance Reviews': parameters['Performance Reviews'] || 'Annual performance evaluations',
+    'Notice Period': parameters['Notice Period'] || '2 weeks written notice',
+    'Severance Policy': parameters['Severance Policy'] || parameters.severance || '',
+    
+    // WORK ARRANGEMENT
+    'Work Arrangement': parameters['Work Arrangement'] || parameters.workArrangement || 'On-site with remote work flexibility',
+    'Work Location': parameters['Work Location'] || parameters.workLocation || 'Company offices and approved remote locations',
+    
+    // LEGAL PROTECTIONS
+    'Confidentiality': parameters['Confidentiality'] || 'Confidentiality and non-disclosure obligations',
+    'Confidentiality Duration': parameters['Confidentiality Duration'] || '2 years post-termination',
+    'IP Assignment': parameters['IP Assignment'] || 'Assignment of work-related intellectual property',
+    'Non-Compete Period': parameters['Non-Compete Period'] || parameters['Non-Compete'] || '',
+    'Non-Compete': parameters['Non-Compete'] || parameters['Non-Compete Period'] || '',
+    'Non-Solicitation Period': parameters['Non-Solicitation Period'] || parameters['Non-Solicitation'] || '1 year',
+    'Non-Solicitation': parameters['Non-Solicitation'] || 'Non-solicitation of employees and clients',
+    'Expense Reimbursement': parameters['Expense Reimbursement'] || 'Reimbursement for approved business expenses within 30 days',
+    
+    // STANDARD LEGAL DETAILS
     'Company Registration': parameters['Company Registration'] || 'C0000000',
     'Employee SSN': '[To be provided by employee]', // Never require SSN in template
-    'Supervisor Name': parameters['Supervisor Name'] || parameters['Supervisor Title'] || 'designated supervisor',
-    'Supervisor Title': parameters['Supervisor Title'] || 'Manager',
-    'Work Location': parameters['Work Location'] || 'Company offices',
-    'Annual Salary': parameters['Annual Salary'] || parameters['Salary Amount'] || parameters.amount || '$[SALARY]',
-    'Salary Amount': parameters['Salary Amount'] || parameters['Annual Salary'] || parameters.amount || '$[SALARY]',
     'Company Address': parameters['Company Address'] || '123 Business Street, [City], CA [ZIP]',
     'Employee Address': parameters['Employee Address'] || '[Employee Address]',
-    'State': parameters['State'] || parameters.jurisdiction || 'California',
-    'Job Title': parameters['Job Title'] || 'Employee',
+    'State': parameters['State'] || parameters['Governing Law'] || parameters.jurisdiction || 'California',
+    'Governing Law': parameters['Governing Law'] || parameters['State'] || 'California',
+    'Jurisdiction': parameters['Jurisdiction'] || parameters['Governing Law'] || 'California',
     'Date': parameters['Date'] || new Date().toLocaleDateString(),
     'exempt/non-exempt': parameters['exempt/non-exempt'] || 'exempt',
     'Company Type': parameters['Company Type'] || 'corporation',
+    'State of Incorporation': parameters['State of Incorporation'] || parameters['State'] || 'California',
     'Arbitration Provider, e.g., JAMS': 'JAMS',
-    'Specify County, e.g., Los Angeles County': parameters['Specify County, e.g., Los Angeles County'] || 'Los Angeles County'
+    'Specify County, e.g., Los Angeles County': parameters['Specify County, e.g., Los Angeles County'] || 'Los Angeles County',
+    
+    // ADDITIONAL STRATEGIC PARAMETERS
+    'Pay Period': parameters['Pay Period'] || parameters.payPeriod || 'year',
+    'hour/year': parameters['hour/year'] || 'year'
   };
+  
+  console.log('🎯 Master Input Brief - Processing parameters:', Object.keys(parameters).length, 'parameters');
+  console.log('📋 Available parameters:', Object.keys(parameters).filter(k => parameters[k] && parameters[k] !== '').slice(0, 10));
 
   return text.replace(/\[([\w\s/.,]+)\]/g, (match, placeholderName) => {
     const key = placeholderName.trim();
     
-    // Use parameter defaults if available
+    // Use parameter defaults if available (priority order)
+    if (parameterDefaults.hasOwnProperty(key)) {
+      const defaultValue = parameterDefaults[key];
+      if (defaultValue && defaultValue !== '' && !defaultValue.startsWith('[')) {
+        return defaultValue;
+      }
+    }
+    
+    // Direct parameter lookup with comprehensive key matching
+    const directValue = parameters[key] || parameters[key.toLowerCase()] || parameters[key.replace(/\s+/g, '')];
+    if (directValue !== undefined && directValue !== null && directValue !== '') {
+      return directValue;
+    }
+    
+    // Advanced parameter matching for common variations
+    const keyVariations = [
+      key.toLowerCase(),
+      key.replace(/\s+/g, ''),
+      key.replace(/\s+/g, '_'),
+      key.replace(/_/g, ' '),
+      key.replace(/([a-z])([A-Z])/g, '$1 $2')
+    ];
+    
+    for (const variation of keyVariations) {
+      if (parameters[variation] !== undefined && parameters[variation] !== null && parameters[variation] !== '') {
+        console.log(`📝 Found parameter variation: ${key} -> ${variation} = ${parameters[variation]}`);
+        return parameters[variation];
+      }
+    }
+    
+    // Return parameter default even if placeholder, or warn
     if (parameterDefaults.hasOwnProperty(key)) {
       return parameterDefaults[key];
     }
     
-    // Fallback to direct parameter lookup
-    if (parameters[key] !== undefined && parameters[key] !== null && parameters[key] !== '') {
-      return parameters[key];
-    }
-    
-    // Critical error: still missing required data
-    console.warn(`Missing required parameter: ${key}`);
-    return `[${key}]`; // Clean placeholder, no scary MISSING_DATA
+    console.warn(`⚠️  Missing parameter: ${key} (available: ${Object.keys(parameters).slice(0, 5).join(', ')}...)`);
+    return `[${key}]`; // Clean placeholder for contract review
   });
 }
 

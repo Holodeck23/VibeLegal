@@ -1,13 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
+import { AuthContext } from '../App';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X } from 'lucide-react';
+import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X, Copy, RotateCcw, Square } from 'lucide-react';
 
 export function ChatInterface({ onContractGenerate, isLoading }) {
+  const { handleAuthError } = useContext(AuthContext);
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -28,6 +30,9 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
   });
   const [isTyping, setIsTyping] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [progressIndicator, setProgressIndicator] = useState('0% complete');
+  const [canForceGenerate, setCanForceGenerate] = useState(false);
+  const [abortController, setAbortController] = useState(null);
   const scrollRef = useRef(null);
 
   // Intelligent AI conversation system
@@ -52,6 +57,19 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
       console.log('Response status:', response.status);
       
       if (!response.ok) {
+        if (response.status === 401) {
+          // Token expired or invalid, trigger logout
+          console.log('Authentication failed, redirecting to login');
+          handleAuthError();
+          return {
+            nextQuestion: "Your session has expired. Please log in again to continue.",
+            analysis: null,
+            suggestions: [],
+            missingInfo: [],
+            readyToGenerate: false
+          };
+        }
+        
         const errorData = await response.text();
         console.error('API Error Response:', errorData);
         throw new Error(`API Error: ${response.status} - ${errorData}`);
@@ -80,6 +98,399 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  // Master Input Brief Framework - Comprehensive Parameter Extraction
+  const extractParametersFromConversation = (conversationText, existingParams = {}) => {
+    const params = { ...existingParams };
+    const text = conversationText.toLowerCase();
+    const originalText = conversationText;
+    
+    console.log('Processing conversation for parameter extraction:', text.substring(0, 200) + '...');
+    
+    // CORE EMPLOYMENT DETAILS
+    // Extract salary/compensation with multiple formats
+    const salaryPatterns = [
+      /\$(\d{2,3}),?(\d{3})(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /\$(\d{2,3})k(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /(\d{2,3})k(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /\$(\d{4,6})(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /salary.*?\$(\d{2,3}),?(\d{3})/gi,
+      /pay.*?\$(\d{2,3}),?(\d{3})/gi
+    ];
+    
+    for (const pattern of salaryPatterns) {
+      const matches = [...originalText.matchAll(pattern)];
+      if (matches.length > 0) {
+        const lastMatch = matches[matches.length - 1];
+        let salary;
+        if (lastMatch[0].includes('k')) {
+          salary = parseInt(lastMatch[1] || lastMatch[0].replace(/[^0-9]/g, '')) * 1000;
+        } else if (lastMatch[2]) {
+          salary = parseInt(lastMatch[1] + lastMatch[2]);
+        } else {
+          salary = parseInt(lastMatch[1] || lastMatch[0].replace(/[^0-9]/g, ''));
+        }
+        
+        if (salary > 30000) {
+          params['Annual Salary'] = `$${salary.toLocaleString()}`;
+          params['Salary Amount'] = salary.toString();
+          console.log('Extracted salary:', salary);
+          break;
+        }
+      }
+    }
+    
+    // Extract hourly wages
+    const hourlyMatch = text.match(/(\d+)(?:\.\d{2})?\s*(?:per|\/)\s*hour|\$(\d+)(?:\.\d{2})?\s*(?:\/hr|hourly)/gi);
+    if (hourlyMatch && !params['Annual Salary']) {
+      const hourlyRate = parseFloat(hourlyMatch[0].replace(/[^0-9.]/g, ''));
+      if (hourlyRate > 15) {
+        params['Hourly Rate'] = `$${hourlyRate}/hour`;
+        params['Annual Salary'] = `$${Math.round(hourlyRate * 40 * 52).toLocaleString()} (estimated from hourly)`;
+      }
+    }
+    
+    // Extract job titles with comprehensive patterns
+    const jobTitlePatterns = [
+      /(?:position|role|title|job)\s*:?\s*([A-Za-z\s&-]+?)(?:\s|$|,|\.)/gi,
+      /(?:as|for)\s+(?:a|an)?\s*([A-Za-z\s&-]+?)\s+(?:position|role)/gi,
+      /hire.*?(?:as|for)\s+(?:a|an)?\s*([A-Za-z\s&-]+)/gi,
+      /software\s+(?:developer|engineer)/gi,
+      /senior\s+[A-Za-z\s]+/gi,
+      /lead\s+[A-Za-z\s]+/gi,
+      /(?:product|project|engineering|marketing|sales|hr|human resources)\s+manager/gi
+    ];
+    
+    for (const pattern of jobTitlePatterns) {
+      const match = originalText.match(pattern);
+      if (match) {
+        let title = match[1] || match[0];
+        title = title.replace(/^(as|for|a|an)\s+/gi, '').trim();
+        if (title.length > 3 && title.length < 50) {
+          params['Job Title'] = title;
+          console.log('Extracted job title:', title);
+          break;
+        }
+      }
+    }
+    
+    // Extract company information
+    const companyPatterns = [
+      /(?:company|organization|employer)\s*:?\s*([A-Z][a-zA-Z\s&,.-]+?)(?:\s|$|,|\.)/gi,
+      /(?:at|for|with)\s+([A-Z][a-zA-Z\s&,.-]+?)(?:\s+(?:company|corp|inc|llc)|$)/gi,
+      /work\s+(?:at|for)\s+([A-Z][a-zA-Z\s&,.-]+)/gi
+    ];
+    
+    for (const pattern of companyPatterns) {
+      const match = originalText.match(pattern);
+      if (match && match[1]) {
+        const company = match[1].trim().replace(/\s+/g, ' ');
+        if (company.length > 2 && company.length < 50 && !company.match(/^(the|a|an)$/i)) {
+          params['Company Name'] = company;
+          params['Client Name'] = company;
+          console.log('Extracted company:', company);
+          break;
+        }
+      }
+    }
+    
+    // Extract employee name
+    const namePatterns = [
+      /(?:employee|candidate|hire)\s*:?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/gi,
+      /(?:hiring|for)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/gi,
+      /name\s*:?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/gi
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = originalText.match(pattern);
+      if (match && match[1]) {
+        params['Employee Name'] = match[1].trim();
+        params['Other Party Name'] = match[1].trim();
+        console.log('Extracted employee name:', match[1]);
+        break;
+      }
+    }
+    
+    // WORK ARRANGEMENT & LOCATION
+    if (text.includes('remote') && !text.includes('no remote')) {
+      if (text.includes('fully remote') || text.includes('100% remote')) {
+        params['Work Arrangement'] = 'Fully remote work arrangement';
+      } else {
+        params['Work Arrangement'] = 'Remote work allowed';
+      }
+    } else if (text.includes('hybrid')) {
+      params['Work Arrangement'] = 'Hybrid work arrangement (office + remote)';
+    } else if (text.includes('office') || text.includes('on-site')) {
+      params['Work Arrangement'] = 'On-site office-based work';
+    }
+    
+    // Extract specific work location
+    const locationMatch = originalText.match(/(?:located?|based)\s+in\s+([A-Za-z\s,]+?)(?:\s|$|,|\.)/gi);
+    if (locationMatch) {
+      params['Work Location'] = locationMatch[0].replace(/^(located?|based)\s+in\s+/gi, '').trim();
+    }
+    
+    // BENEFITS & COMPENSATION DETAILS
+    
+    // Health insurance details
+    if (text.includes('health') && (text.includes('insurance') || text.includes('benefits'))) {
+      if (text.includes('full') || text.includes('100%')) {
+        params['Health Insurance'] = 'Full health insurance coverage provided';
+      } else if (text.includes('partial') || text.includes('%')) {
+        const percentMatch = text.match(/(\d+)%.*health/gi);
+        if (percentMatch) {
+          params['Health Insurance'] = `${percentMatch[1]}% health insurance coverage`;
+        } else {
+          params['Health Insurance'] = 'Partial health insurance coverage';
+        }
+      } else {
+        params['Health Insurance'] = 'Health insurance benefits included';
+      }
+    }
+    
+    // Dental and vision
+    if (text.includes('dental')) {
+      params['Dental Insurance'] = 'Dental insurance coverage included';
+    }
+    if (text.includes('vision')) {
+      params['Vision Insurance'] = 'Vision insurance coverage included';
+    }
+    
+    // 401k and retirement
+    if (text.includes('401k') || text.includes('retirement')) {
+      const matchPercent = text.match(/(\d+)%.*(?:match|401k|retirement)/gi);
+      if (matchPercent) {
+        params['Retirement Benefits'] = `401(k) with ${matchPercent[1]}% company match`;
+      } else {
+        params['Retirement Benefits'] = '401(k) retirement plan available';
+      }
+    }
+    
+    // PTO/Vacation detailed extraction
+    const ptoPatterns = [
+      /(\d+)\s+days?\s+(?:of\s+)?(?:pto|paid time off|vacation)/gi,
+      /(\d+)\s+weeks?\s+(?:of\s+)?(?:vacation|pto)/gi,
+      /vacation\s*:?\s*(\d+)\s+(?:days?|weeks?)/gi
+    ];
+    
+    for (const pattern of ptoPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const amount = match[1];
+        if (match[0].includes('week')) {
+          params['PTO Policy'] = `${amount} weeks paid time off annually`;
+          params['Annual PTO Days'] = (parseInt(amount) * 5).toString();
+        } else {
+          params['PTO Policy'] = `${amount} days paid time off annually`;
+          params['Annual PTO Days'] = amount;
+        }
+        console.log('Extracted PTO:', params['PTO Policy']);
+        break;
+      }
+    }
+    
+    // Sick leave
+    const sickLeaveMatch = text.match(/(\d+)\s+(?:days?|hours?)\s+(?:of\s+)?sick\s+(?:leave|time)/gi);
+    if (sickLeaveMatch) {
+      params['Sick Leave'] = sickLeaveMatch[0];
+    }
+    
+    // EMPLOYMENT TERMS & CONDITIONS
+    
+    // Probation period with multiple formats
+    const probationPatterns = [
+      /(\d+)[-\s]?(?:day|month)\s+probation/gi,
+      /probation[ary]*\s+period[\s:]*\s*(\d+)\s*(?:days?|months?)/gi,
+      /(\d+)\s*(?:days?|months?)\s*probation/gi
+    ];
+    
+    for (const pattern of probationPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const period = match[1];
+        const unit = match[0].includes('month') ? 'months' : 'days';
+        params['Probation Period'] = `${period} ${unit} probationary period`;
+        params['Probationary Period Length'] = `${period} ${unit}`;
+        console.log('Extracted probation:', params['Probation Period']);
+        break;
+      }
+    }
+    
+    // Performance review schedule
+    if (text.includes('review') && (text.includes('annual') || text.includes('yearly'))) {
+      params['Performance Reviews'] = 'Annual performance reviews';
+    } else if (text.includes('review') && (text.includes('quarterly') || text.includes('90 day'))) {
+      params['Performance Reviews'] = 'Quarterly performance reviews';
+    } else if (text.includes('review') && text.includes('monthly')) {
+      params['Performance Reviews'] = 'Monthly performance reviews';
+    }
+    
+    // EQUITY & STOCK OPTIONS
+    if (text.includes('equity') || text.includes('stock options') || text.includes('shares')) {
+      const equityPatterns = [
+        /(\d+(?:,\d{3})*)\s+(?:shares|stock options|equity)/gi,
+        /(\d+\.\d+)%\s+equity/gi,
+        /equity\s*:?\s*(\d+(?:,\d{3})*|\d+\.\d+%)/gi
+      ];
+      
+      for (const pattern of equityPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          params['Equity Compensation'] = match[0];
+          console.log('Extracted equity:', match[0]);
+          break;
+        }
+      }
+      
+      // Vesting schedule
+      if (text.includes('vest') || text.includes('cliff')) {
+        const vestMatch = text.match(/(\d+)\s*year\s*(?:cliff|vesting)/gi);
+        if (vestMatch) {
+          params['Vesting Schedule'] = vestMatch[0];
+        } else {
+          params['Vesting Schedule'] = 'Standard vesting schedule applies';
+        }
+      }
+    }
+    
+    // TERMINATION & SEVERANCE
+    const severancePatterns = [
+      /(\d+)\s+(?:weeks?|months?)\s+severance/gi,
+      /severance\s*:?\s*(\d+)\s*(?:weeks?|months?)/gi
+    ];
+    
+    for (const pattern of severancePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        params['Severance Policy'] = match[0];
+        console.log('Extracted severance:', match[0]);
+        break;
+      }
+    }
+    
+    // Notice period
+    const noticePatterns = [
+      /(\d+)\s+(?:weeks?|days?)\s+notice/gi,
+      /notice\s+period\s*:?\s*(\d+)\s*(?:weeks?|days?)/gi,
+      /(\d+)[-\s]?(?:week|day)\s+notice/gi
+    ];
+    
+    for (const pattern of noticePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        params['Notice Period'] = match[0];
+        break;
+      }
+    }
+    
+    // CONFIDENTIALITY & IP
+    if (text.includes('confidential') || text.includes('nda') || text.includes('non-disclosure')) {
+      params['Confidentiality'] = 'Confidentiality and non-disclosure provisions included';
+      
+      // Duration of confidentiality
+      const confDurationMatch = text.match(/(\d+)\s*years?\s*(?:after|post|following).*(?:termination|confidential)/gi);
+      if (confDurationMatch) {
+        params['Confidentiality Duration'] = confDurationMatch[0];
+      }
+    }
+    
+    // IP assignment
+    if (text.includes('intellectual property') || text.includes('ip assignment') || text.includes('inventions')) {
+      params['IP Assignment'] = 'Intellectual property assignment clause included';
+    }
+    
+    // NON-COMPETE & NON-SOLICIT
+    if (text.includes('non-compete') || text.includes('noncompete')) {
+      const nonCompeteMatch = text.match(/(\d+)\s*(?:years?|months?)\s*non[- ]?compete/gi);
+      if (nonCompeteMatch) {
+        params['Non-Compete Period'] = nonCompeteMatch[0];
+      } else {
+        params['Non-Compete'] = 'Non-compete restrictions apply';
+      }
+    }
+    
+    if (text.includes('non-solicit') || text.includes('nonsolicitation')) {
+      const nonSolicitMatch = text.match(/(\d+)\s*(?:years?|months?)\s*non[- ]?solicit/gi);
+      if (nonSolicitMatch) {
+        params['Non-Solicitation Period'] = nonSolicitMatch[0];
+      } else {
+        params['Non-Solicitation'] = 'Non-solicitation restrictions apply';
+      }
+    }
+    
+    // EXPENSE REIMBURSEMENT
+    if (text.includes('expense') && (text.includes('reimburse') || text.includes('reimbursement'))) {
+      const expenseMatch = text.match(/(\d+)\s*days?\s*(?:for\s+)?(?:expense\s+)?reimbursement/gi);
+      if (expenseMatch) {
+        params['Expense Reimbursement'] = `Expenses reimbursed within ${expenseMatch[1]} days`;
+      } else {
+        params['Expense Reimbursement'] = 'Business expense reimbursement provided';
+      }
+    }
+    
+    // BONUS STRUCTURE
+    const bonusPatterns = [
+      /(\d+)%\s*(?:annual\s+)?bonus/gi,
+      /bonus\s*:?\s*\$(\d+(?:,\d{3})*)/gi,
+      /\$(\d+(?:,\d{3})*)\s*(?:annual\s+)?bonus/gi
+    ];
+    
+    for (const pattern of bonusPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        params['Bonus Structure'] = match[0];
+        console.log('Extracted bonus:', match[0]);
+        break;
+      }
+    }
+    
+    // JURISDICTION & GOVERNING LAW
+    const jurisdictionMatch = originalText.match(/(?:california|ca|new york|ny|texas|tx|florida|fl)\s+law/gi);
+    if (jurisdictionMatch) {
+      params['Governing Law'] = jurisdictionMatch[0];
+    } else if (!params['Governing Law']) {
+      params['Governing Law'] = 'California';
+    }
+    
+    // START DATE
+    const startDatePatterns = [
+      /start(?:ing)?\s+(?:date|on)?\s*:?\s*([A-Za-z]+ \d{1,2},? \d{4})/gi,
+      /begin(?:ning)?\s+([A-Za-z]+ \d{1,2},? \d{4})/gi,
+      /effective\s+([A-Za-z]+ \d{1,2},? \d{4})/gi
+    ];
+    
+    for (const pattern of startDatePatterns) {
+      const match = originalText.match(pattern);
+      if (match) {
+        params['Start Date'] = match[1];
+        break;
+      }
+    }
+    
+    // REPORTING STRUCTURE
+    const reportsToMatch = originalText.match(/reports?\s+to\s+([A-Za-z\s,]+?)(?:\s|$|,|\.)/gi);
+    if (reportsToMatch) {
+      params['Reports To'] = reportsToMatch[0].replace(/^reports?\s+to\s+/gi, '').trim();
+    }
+    
+    // WORK SCHEDULE
+    if (text.includes('full time') || text.includes('full-time')) {
+      params['Employment Type'] = 'Full-time';
+    } else if (text.includes('part time') || text.includes('part-time')) {
+      params['Employment Type'] = 'Part-time';
+    } else if (text.includes('contract') || text.includes('contractor')) {
+      params['Employment Type'] = 'Contract';
+    }
+    
+    // Work hours
+    const hoursMatch = text.match(/(\d+)\s*hours?\s*(?:per\s+)?week/gi);
+    if (hoursMatch) {
+      params['Work Hours'] = hoursMatch[0];
+    }
+    
+    console.log('Master Input Brief - Final extracted parameters:', params);
+    return params;
   };
 
   const addMessage = (type, content) => {
@@ -124,6 +535,26 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
       };
       setSessionData(updatedSessionData);
 
+      // Update progress indicator if available
+      if (aiResponse.progressIndicator) {
+        console.log('Updating progress indicator:', aiResponse.progressIndicator);
+        setProgressIndicator(aiResponse.progressIndicator);
+      } else {
+        // Calculate progress based on conversation length and extracted info
+        const baseProgress = Math.min(70, Math.max(5, (messages.length / 12) * 70));
+        const parameterBonus = Math.min(20, Object.keys(sessionData.extractedParams).length * 5);
+        const progressValue = Math.round(baseProgress + parameterBonus);
+        const calculatedProgress = `${progressValue}% complete`;
+        console.log('Calculated progress indicator:', calculatedProgress);
+        setProgressIndicator(calculatedProgress);
+      }
+      
+      // Enable force generation if conversation has progressed enough
+      const progressValue = parseInt((aiResponse.progressIndicator || progressIndicator)?.replace(/[^0-9]/g, '') || '0');
+      const shouldEnableGenerate = progressValue >= 30 || messages.length >= 4 || Object.keys(sessionData.extractedParams).length >= 2;
+      console.log('Should enable generate:', shouldEnableGenerate, 'Progress:', progressValue, 'Messages:', messages.length, 'Params:', Object.keys(sessionData.extractedParams).length);
+      setCanForceGenerate(shouldEnableGenerate);
+
       setIsTyping(false);
 
       // If AI suggests contract is ready to generate
@@ -140,7 +571,8 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
           },
           conversationalData: updatedSessionData,
           aiAnalysis: aiResponse.analysis,
-          suggestedClauses: aiResponse.suggestedClauses
+          suggestedClauses: aiResponse.suggestedClauses,
+          generationMethod: "conversational_ai" // Mark as AI chat generated
         };
 
         onContractGenerate(contractParams);
@@ -166,6 +598,57 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
     }
   };
 
+  // Copy message to clipboard
+  const copyToClipboard = async (text, event = null) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      console.log('Copied to clipboard:', text.substring(0, 50) + '...');
+    } catch (err) {
+      console.error('Failed to copy text:', err);
+      // Fallback for older browsers
+      try {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        console.log('Copied using fallback method');
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+    }
+  };
+
+  // Regenerate the last bot response
+  const regenerateResponse = async (messageIndex) => {
+    // Find the user message that prompted this bot response
+    const userMessage = messages[messageIndex - 1];
+    if (userMessage && userMessage.type === 'user') {
+      // Remove the bot message and regenerate
+      const newMessages = messages.slice(0, messageIndex);
+      setMessages(newMessages);
+      await processUserInput(userMessage.content);
+    }
+  };
+
+  // Stop current AI generation
+  const stopGeneration = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+    }
+    setIsTyping(false);
+    
+    // Add stop message only if there's no existing bot message in progress
+    // This prevents the message vanishing issue
+    setTimeout(() => {
+      if (!isTyping) {
+        addMessage('bot', "Generation stopped. How can I help you continue with your contract?");
+      }
+    }, 100);
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -180,6 +663,101 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleForceGenerate = async () => {
+    if (!canForceGenerate) return;
+    
+    addMessage('user', 'Generate contract now');
+    setIsTyping(true);
+    
+    try {
+      // Build conversation context
+      const conversationContext = {
+        messages: messages,
+        extractedParams: sessionData.extractedParams,
+        contractType: 'employment_agreement',
+        jurisdiction: sessionData.jurisdiction
+      };
+
+      // Force generation by sending "generate" command
+      const aiResponse = await analyzeUserInput('generate contract now', conversationContext);
+      
+      setIsTyping(false);
+
+      if (aiResponse.readyToGenerate && aiResponse.contractParams) {
+        addMessage('bot', "Perfect! I'll generate your employment contract now with all the information we've gathered.");
+        
+        const contractParams = {
+          contractType: "employment_agreement",
+          parameters: aiResponse.contractParams,
+          preferences: {
+            risk_tolerance: aiResponse.recommendedRiskLevel || 'moderate',
+            legal_stance: aiResponse.recommendedStance || 'neutral'
+          },
+          conversationalData: sessionData,
+          aiAnalysis: aiResponse.analysis,
+          suggestedClauses: aiResponse.suggestedClauses
+        };
+
+        onContractGenerate(contractParams);
+      } else {
+        addMessage('bot', "I'm working on generating your contract now. Let me create it with the information we've discussed so far.");
+        
+        // Extract parameters from conversation messages
+        const conversationText = messages.map(m => m.content).join(' ');
+        const extractedParams = extractParametersFromConversation(conversationText, sessionData.extractedParams);
+        
+        // Force generation with extracted parameters
+        const contractParams = {
+          contractType: "employment_agreement",
+          parameters: extractedParams,
+          preferences: {
+            risk_tolerance: 'moderate',
+            legal_stance: 'neutral'
+          },
+          conversationalData: {
+            ...sessionData,
+            extractedParams: extractedParams,
+            conversationSummary: conversationText
+          },
+          aiAnalysis: "Force generated by user request",
+          suggestedClauses: [],
+          generationMethod: "conversational_ai" // Mark as AI chat generated
+        };
+
+        console.log('Force generating with parameters:', contractParams);
+        onContractGenerate(contractParams);
+      }
+      
+    } catch (error) {
+      setIsTyping(false);
+      console.error('Force generation error:', error);
+      addMessage('bot', "I'll generate the contract with the information we have. Let me create it now.");
+      
+      // Fallback generation with comprehensive parameters
+      const conversationText = messages.map(m => m.content).join(' ');
+      const fallbackParams = extractParametersFromConversation(conversationText, sessionData.extractedParams);
+      
+      const contractParams = {
+        contractType: "employment_agreement",
+        parameters: {
+          ...fallbackParams,
+          'State': 'California',
+          'Governing Law': 'California',
+          'Jurisdiction': 'California'
+        },
+        preferences: { risk_tolerance: 'moderate', legal_stance: 'neutral' },
+        conversationalData: {
+          ...sessionData,
+          conversationSummary: conversationText,
+          extractedParams: fallbackParams
+        },
+        generationMethod: "conversational_ai"
+      };
+
+      onContractGenerate(contractParams);
     }
   };
 
@@ -235,8 +813,23 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
             </DialogContent>
           </Dialog>
         </CardTitle>
-        <CardDescription>
-          Let's create your employment contract through conversation
+        <CardDescription className="flex items-center justify-between">
+          <span>Let's create your employment contract through conversation</span>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {progressIndicator}
+            </Badge>
+            {canForceGenerate && (
+              <Button 
+                onClick={handleForceGenerate}
+                size="sm" 
+                className="bg-green-600 hover:bg-green-700 text-white"
+                disabled={isTyping}
+              >
+                Generate Now
+              </Button>
+            )}
+          </div>
         </CardDescription>
         
         {/* Progress Steps */}
@@ -277,7 +870,7 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
                       <Bot className="w-4 h-4 text-blue-600" />
                     </div>
                     {/* Bot message */}
-                    <div style={{ maxWidth: '280px' }}>
+                    <div style={{ maxWidth: '280px' }} className="group">
                       <div className="px-4 py-2 rounded-lg bg-gray-100 text-gray-900" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                         <p className="text-sm" style={{ 
                           wordBreak: 'break-word', 
@@ -286,12 +879,34 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
                         }}>
                           {message.content}
                         </p>
-                        <p className="text-xs opacity-70 mt-1">
-                          {message.timestamp.toLocaleTimeString([], { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
-                        </p>
+                        <div className="flex items-center justify-between mt-2">
+                          <p className="text-xs opacity-70">
+                            {message.timestamp.toLocaleTimeString([], { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </p>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-1 text-gray-500 hover:text-gray-700"
+                              onClick={() => copyToClipboard(message.content)}
+                              title="Copy message"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-1 text-gray-500 hover:text-gray-700"
+                              onClick={() => regenerateResponse(messages.findIndex(m => m.id === message.id))}
+                              title="Regenerate response"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </>
@@ -327,16 +942,25 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
             ))}
 
             {isTyping && (
-              <div className="flex gap-3 justify-start">
+              <div className="flex gap-3 justify-start items-start">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
                   <Bot className="w-4 h-4 text-blue-600" />
                 </div>
-                <div className="bg-gray-100 px-4 py-2 rounded-lg rounded-bl-none">
+                <div className="bg-gray-100 px-4 py-2 rounded-lg rounded-bl-none flex items-center gap-3">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-150"></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse delay-300"></div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-1 text-gray-500 hover:text-red-600"
+                    onClick={stopGeneration}
+                    title="Stop generation"
+                  >
+                    <Square className="w-3 h-3 fill-current" />
+                  </Button>
                 </div>
               </div>
             )}

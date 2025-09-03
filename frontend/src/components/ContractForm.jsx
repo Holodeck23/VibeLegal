@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,9 +23,18 @@ const ContractForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isEnhancedMode, setIsEnhancedMode] = useState(true);
   const [useConversationalAI, setUseConversationalAI] = useState(false);
+
+  // Handle resuming conversation from contract result page
+  useEffect(() => {
+    if (location.state?.useConversationalAI) {
+      setIsEnhancedMode(true);
+      setUseConversationalAI(true);
+    }
+  }, [location.state]);
 
   // Reset conversational AI toggle when switching out of enhanced mode
   useEffect(() => {
@@ -183,14 +192,25 @@ const ContractForm = () => {
       });
       const data = await response.json();
       if (response.ok) {
+        // Determine contract type based on generation method
+        const contractType = userInput.generationMethod === "conversational_ai" 
+          ? "Conversational AI Employment Agreement"
+          : "Enhanced Employment Agreement";
+        
+        const version = userInput.generationMethod === "conversational_ai" 
+          ? "conversational_ai" 
+          : "enhanced";
+
         navigate("/contract-result", {
           state: {
             contract: data.contract,
             metadata: data.metadata,
-            contractType: "Enhanced Employment Agreement",
+            contractType: contractType,
             clientName: userInput.parameters.clientName || userInput.parameters["Company Name"],
             otherPartyName: userInput.parameters.otherPartyName || userInput.parameters["Employee Name"],
-            version: "enhanced"
+            version: version,
+            conversationalData: userInput.conversationalData || null,
+            canReturnToChat: userInput.generationMethod === "conversational_ai"
           }
         });
       } else {
@@ -289,6 +309,7 @@ const ContractForm = () => {
               <ConversationalContractBuilder 
                 onContractGenerate={handleEnhancedGenerate}
                 isLoading={loading}
+                resumeData={location.state?.conversationalData || null}
               />
             ) : isEnhancedMode ? (
               <EnhancedContractBuilder 

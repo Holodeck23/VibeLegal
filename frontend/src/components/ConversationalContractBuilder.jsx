@@ -25,6 +25,7 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
   const { userTier, hasAccess, refreshTier } = useSubscription();
 
   const handleChatContractGenerate = async (chatData) => {
+    console.log('Chat data received for generation:', chatData);
     setContractData(chatData);
     
     // Generate the contract using the existing flow
@@ -52,14 +53,48 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
   };
 
   const handleCustomizationPreview = async (preferences) => {
-    // Mock preview generation - integrate with AI provider
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({
-          preview: `Contract preview with customizations:\n\nRisk Tolerance: ${preferences.risk_tolerance}/100\nLegal Stance: ${preferences.legal_stance}\n\nThis would show how the contract changes based on your customization settings...`
-        });
-      }, 1000);
-    });
+    try {
+      // Use the contract generation API to create a preview
+      const token = localStorage.getItem('token');
+      
+      if (!contractData || !contractData.parameters) {
+        return {
+          preview: "No contract data available for preview. Please generate a contract first."
+        };
+      }
+
+      const previewPayload = {
+        contractType: contractData.contractType || 'employment_agreement',
+        parameters: contractData.parameters,
+        preferences: preferences,
+        preview: true // Flag to indicate this is a preview request
+      };
+
+      const response = await fetch('/api/generate-contract', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(previewPayload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Preview failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      return {
+        preview: result.contractContent || "Preview generation failed"
+      };
+      
+    } catch (error) {
+      console.error('Preview generation error:', error);
+      return {
+        preview: `Preview Error: ${error.message}\n\nFalling back to mock preview:\n\nRisk Tolerance: ${preferences.risk_tolerance}/100\nLegal Stance: ${preferences.legal_stance}\n\nCustomized clause strengths:\n${Object.entries(preferences.clause_strength).map(([clause, strength]) => `• ${clause}: ${strength}%`).join('\n')}`
+      };
+    }
   };
 
   const handleVersionSelect = (version) => {
