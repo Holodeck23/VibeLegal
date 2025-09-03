@@ -48,6 +48,55 @@ export function AdvancedContractCustomizer({
     }
   }, [preferences, onUpdate]);
 
+  // Update preferences based on AI chat data
+  useEffect(() => {
+    if (contractData && contractData.preferences) {
+      console.log('Updating preferences from AI chat data:', contractData.preferences);
+      setPreferences(prev => ({
+        ...prev,
+        risk_tolerance: mapRiskTolerance(contractData.preferences.risk_tolerance),
+        legal_stance: contractData.preferences.legal_stance || prev.legal_stance,
+        // Update other preferences based on AI analysis
+        ...(contractData.aiAnalysis && contractData.aiAnalysis.recommendedClauses && {
+          clause_strength: {
+            ...prev.clause_strength,
+            // Map recommended clauses to strength values
+            ...mapClauseStrengths(contractData.aiAnalysis.recommendedClauses)
+          }
+        })
+      }));
+    }
+  }, [contractData]);
+
+  // Helper function to map AI risk tolerance to slider value
+  const mapRiskTolerance = (aiRiskTolerance) => {
+    if (typeof aiRiskTolerance === 'number') return aiRiskTolerance;
+    
+    const riskMap = {
+      'conservative': 25,
+      'low': 25,
+      'moderate': 50,
+      'medium': 50,
+      'aggressive': 75,
+      'high': 75
+    };
+    return riskMap[aiRiskTolerance] || 50;
+  };
+
+  // Helper function to map recommended clauses to strength values
+  const mapClauseStrengths = (recommendedClauses = []) => {
+    const strengthMap = {};
+    recommendedClauses.forEach(clause => {
+      // Map clause IDs to our strength categories
+      if (clause.includes('confidentiality')) strengthMap.confidentiality = 80;
+      if (clause.includes('ip_assignment')) strengthMap.ip_assignment = 75;
+      if (clause.includes('arbitration')) strengthMap.arbitration = 85;
+      if (clause.includes('termination')) strengthMap.termination = 70;
+      if (clause.includes('compensation')) strengthMap.compensation = 75;
+    });
+    return strengthMap;
+  };
+
   const handleRiskToleranceChange = (value) => {
     setPreferences(prev => ({
       ...prev,

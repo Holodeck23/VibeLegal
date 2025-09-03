@@ -151,7 +151,7 @@ router.post('/chat/message', async (req, res) => {
     );
 
     // Process message with AI if needed
-    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-flash' });
+    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
     
     // Enhanced conversational prompt for natural contract parameter extraction
     const conversationalPrompt = `You are an AI legal assistant helping extract contract parameters through natural conversation. 
@@ -231,8 +231,26 @@ router.post('/analyze-contract-requirements', async (req, res) => {
     const { userInput, conversationContext, analysisType } = req.body;
     const userId = req.user.id;
 
-    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-flash' });
+    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
     
+    // Check for force generation keywords
+    const forceGenerationKeywords = [
+      'generate', 'generate now', 'create contract', 'create the contract', 
+      'proceed with contract', 'finish', 'done', 'complete', 'that\'s enough',
+      'generate contract now', 'create it', 'proceed', 'move forward',
+      'let\'s generate', 'ready to generate', 'create now'
+    ];
+    
+    const shouldForceGenerate = forceGenerationKeywords.some(keyword => 
+      userInput.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    // Count conversation turns to prevent endless loops
+    const messages = conversationContext.messages || [];
+    const conversationTurns = Math.floor(messages.length / 2); // Divide by 2 for user/bot pairs
+    const maxTurns = 8; // Maximum 8 back-and-forth exchanges
+    const shouldAutoGenerate = conversationTurns >= maxTurns;
+
     // Build intelligent analysis prompt
     const analysisPrompt = `You are an expert legal AI assistant specializing in employment contracts. Your role is to guide users through creating comprehensive, compliant employment contracts by:
 
@@ -241,16 +259,24 @@ router.post('/analyze-contract-requirements', async (req, res) => {
 3. Suggesting specific clauses, variations, or protective measures
 4. Ensuring nothing critical is overlooked
 
+**CRITICAL INSTRUCTIONS:**
+- If user says words like "generate", "create contract", "proceed", "done", or similar - SET readyToGenerate to true
+- After 6+ exchanges, prioritize generation over more questions
+- Focus on essentials: job title, salary, location, duties - don't over-question
+
 **Current conversation context:**
 ${JSON.stringify(conversationContext, null, 2)}
 
 **User's latest input:** "${userInput}"
+**Force generation requested:** ${shouldForceGenerate}
+**Conversation turns:** ${conversationTurns}/${maxTurns}
+**Should auto-generate:** ${shouldAutoGenerate}
 
 **Your task:** Analyze this input and respond with a JSON object containing:
 
 RESPOND ONLY WITH VALID JSON:
 {
-  "nextQuestion": "Your intelligent follow-up question or guidance",
+  "nextQuestion": "Your intelligent follow-up question or guidance (or generation confirmation)",
   "extractedInfo": {"key": "value"}, // Any contract parameters you can extract
   "analysis": "Your analysis of what they've provided and what's needed",
   "suggestions": ["Specific suggestion 1", "Specific suggestion 2"], 
@@ -259,9 +285,40 @@ RESPOND ONLY WITH VALID JSON:
   "recommendedClauses": ["clause_id1", "clause_id2"],
   "recommendedRiskLevel": "conservative|moderate|aggressive", 
   "recommendedStance": "pro_employee|neutral|pro_employer",
-  "readyToGenerate": false, // Only true when you have enough for a complete contract
-  "contractParams": {} // Only include if readyToGenerate is true
+  "readyToGenerate": ${shouldForceGenerate || shouldAutoGenerate}, // Force true if user requested or max turns reached
+  "contractParams": {
+    // When readyToGenerate is true, extract all available parameters from the conversation:
+    // "Company Name": "extracted company name",
+    // "Employee Name": "extracted employee name", 
+    // "Job Title": "extracted job title",
+    // "Annual Salary": "extracted salary",
+    // "Work Location": "extracted work location",
+    // "Benefits": "extracted benefits info",
+    // etc.
+  }, // Include all available parameters if readyToGenerate is true
+  "progressIndicator": "${shouldForceGenerate || shouldAutoGenerate ? '100' : Math.min(90, Math.round(10 + (conversationTurns / maxTurns) * 80))}% complete"
 }
+
+${shouldForceGenerate ? `**USER REQUESTED GENERATION - SET readyToGenerate to true and extract contractParams from conversation context**
+
+EXTRACT THESE PARAMETERS FROM THE CONVERSATION CONTEXT:
+${JSON.stringify(conversationContext, null, 2)}
+
+Look for:
+- Company/employer name
+- Employee name  
+- Job title/position
+- Salary/compensation amount
+- Work location (remote/office/hybrid)
+- Benefits mentioned
+- Start date
+- Any other contract details discussed
+` : ''}
+${shouldAutoGenerate ? `**MAX TURNS REACHED - SET readyToGenerate to true and extract contractParams from conversation**
+
+EXTRACT PARAMETERS FROM CONVERSATION: 
+${JSON.stringify(conversationContext, null, 2)}
+` : ''}
 
 Focus on being an intelligent legal consultant, not a form-filler. Ask smart questions about gaps, suggest protective clauses they might not have considered, and ensure legal compliance.`;
 

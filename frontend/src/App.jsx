@@ -21,14 +21,42 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in on app start
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
+    // Check if user is logged in on app start and validate token
+    const validateToken = async () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      if (token && userData) {
+        try {
+          // Validate token by making a simple API call that doesn't require subscription table
+          const response = await fetch('/api/user-contracts', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            // Token is valid, set user
+            setUser(JSON.parse(userData));
+          } else {
+            // Token is invalid/expired, clear auth data
+            console.log('Token expired, clearing auth data');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setUser(null);
+          }
+        } catch (error) {
+          // Network error or token validation failed
+          console.error('Token validation failed:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
+      }
+      setLoading(false);
+    };
     
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-    }
-    setLoading(false);
+    validateToken();
   }, []);
 
   const login = (userData, token) => {
@@ -43,6 +71,12 @@ function App() {
     setUser(null);
   };
 
+  // Global function to handle authentication errors
+  const handleAuthError = () => {
+    console.log('Authentication error detected, logging out');
+    logout();
+  };;
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -52,7 +86,7 @@ function App() {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, handleAuthError }}>
       <Router>
         <div className="min-h-screen bg-gray-50">
           <DemoNotice />

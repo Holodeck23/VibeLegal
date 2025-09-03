@@ -16,7 +16,8 @@ import {
   CheckCircle,
   ArrowLeft,
   RefreshCw,
-  Wand2
+  Wand2,
+  MessageCircle
 } from 'lucide-react';
 import config from '../config.js';
 
@@ -29,6 +30,7 @@ const ContractResult = () => {
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const [error, setError] = useState('');
   const [contractSections, setContractSections] = useState([]);
   const [metadata, setMetadata] = useState(null);
@@ -39,10 +41,15 @@ const ContractResult = () => {
       return;
     }
 
-    const { contract, contractType, clientName, otherPartyName, metadata } = location.state;
+    const { contract, contractType, clientName, otherPartyName, metadata, version, conversationalData, canReturnToChat } = location.state;
     setContractContent(contract);
     setContractTitle(`${contractType} - ${clientName} & ${otherPartyName}`);
-    setMetadata(metadata || null);
+    setMetadata({
+      ...metadata,
+      version: version || 'basic',
+      conversationalData: conversationalData || null,
+      canReturnToChat: canReturnToChat || false
+    });
     
     // Parse contract into sections for easier editing
     parseContractSections(contract);
@@ -208,6 +215,10 @@ Please provide an improved version of this section only, maintaining legal accur
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    
+    // Show download success feedback
+    setDownloaded(true);
+    setTimeout(() => setDownloaded(false), 3000);
   };
 
   if (!location.state) {
@@ -443,10 +454,22 @@ Please provide an improved version of this section only, maintaining legal accur
                 <Button
                   onClick={handleSave}
                   disabled={saving}
-                  className="w-full"
+                  className={`w-full transition-all duration-300 ${
+                    saved 
+                      ? 'bg-green-600 hover:bg-green-700 text-white' 
+                      : ''
+                  }`}
                 >
                   {saving ? (
-                    'Saving...'
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : saved ? (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Saved!
+                    </>
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
@@ -458,11 +481,41 @@ Please provide an improved version of this section only, maintaining legal accur
                 <Button
                   variant="outline"
                   onClick={handleDownloadPDF}
-                  className="w-full"
+                  className={`w-full transition-all duration-300 ${
+                    downloaded 
+                      ? 'bg-green-50 border-green-300 text-green-700 hover:bg-green-100' 
+                      : ''
+                  }`}
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download as HTML
+                  {downloaded ? (
+                    <>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Downloaded!
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download as HTML
+                    </>
+                  )}
                 </Button>
+
+                {metadata?.canReturnToChat && (
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate('/create-contract', { 
+                      state: { 
+                        useConversationalAI: true,
+                        resumeConversation: true,
+                        conversationalData: metadata.conversationalData
+                      }
+                    })}
+                    className="w-full border-blue-300 text-blue-700 hover:bg-blue-50"
+                  >
+                    <MessageCircle className="mr-2 h-4 w-4" />
+                    Return to AI Chat
+                  </Button>
+                )}
 
                 <div className="pt-4 border-t">
                   <Button
