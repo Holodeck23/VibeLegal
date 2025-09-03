@@ -100,83 +100,396 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
     }
   };
 
-  // Extract parameters from conversation text using pattern matching
+  // Master Input Brief Framework - Comprehensive Parameter Extraction
   const extractParametersFromConversation = (conversationText, existingParams = {}) => {
     const params = { ...existingParams };
     const text = conversationText.toLowerCase();
+    const originalText = conversationText;
     
-    // Extract salary/compensation
-    const salaryMatch = text.match(/\$?(\d{2,3}),?(\d{3})|(\d{2,3})k|\$(\d+)/g);
-    if (salaryMatch) {
-      const salaryStr = salaryMatch[salaryMatch.length - 1]; // Get the last mentioned salary
-      let salary = salaryStr.replace(/[$,k]/g, '');
-      if (salaryStr.includes('k')) {
-        salary = parseInt(salary) * 1000;
-      } else {
-        salary = parseInt(salary.replace(',', ''));
-      }
-      if (salary > 20000) { // Reasonable salary check
-        params['Annual Salary'] = `$${salary.toLocaleString()}`;
-        params['Salary Amount'] = `$${salary.toLocaleString()}`;
+    console.log('Processing conversation for parameter extraction:', text.substring(0, 200) + '...');
+    
+    // CORE EMPLOYMENT DETAILS
+    // Extract salary/compensation with multiple formats
+    const salaryPatterns = [
+      /\$(\d{2,3}),?(\d{3})(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /\$(\d{2,3})k(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /(\d{2,3})k(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /\$(\d{4,6})(?:\s*(?:per|\/)\s*year|annually)?/gi,
+      /salary.*?\$(\d{2,3}),?(\d{3})/gi,
+      /pay.*?\$(\d{2,3}),?(\d{3})/gi
+    ];
+    
+    for (const pattern of salaryPatterns) {
+      const matches = [...originalText.matchAll(pattern)];
+      if (matches.length > 0) {
+        const lastMatch = matches[matches.length - 1];
+        let salary;
+        if (lastMatch[0].includes('k')) {
+          salary = parseInt(lastMatch[1] || lastMatch[0].replace(/[^0-9]/g, '')) * 1000;
+        } else if (lastMatch[2]) {
+          salary = parseInt(lastMatch[1] + lastMatch[2]);
+        } else {
+          salary = parseInt(lastMatch[1] || lastMatch[0].replace(/[^0-9]/g, ''));
+        }
+        
+        if (salary > 30000) {
+          params['Annual Salary'] = `$${salary.toLocaleString()}`;
+          params['Salary Amount'] = salary.toString();
+          console.log('Extracted salary:', salary);
+          break;
+        }
       }
     }
     
-    // Extract job titles
+    // Extract hourly wages
+    const hourlyMatch = text.match(/(\d+)(?:\.\d{2})?\s*(?:per|\/)\s*hour|\$(\d+)(?:\.\d{2})?\s*(?:\/hr|hourly)/gi);
+    if (hourlyMatch && !params['Annual Salary']) {
+      const hourlyRate = parseFloat(hourlyMatch[0].replace(/[^0-9.]/g, ''));
+      if (hourlyRate > 15) {
+        params['Hourly Rate'] = `$${hourlyRate}/hour`;
+        params['Annual Salary'] = `$${Math.round(hourlyRate * 40 * 52).toLocaleString()} (estimated from hourly)`;
+      }
+    }
+    
+    // Extract job titles with comprehensive patterns
     const jobTitlePatterns = [
-      /software developer/i, /developer/i, /engineer/i, /manager/i, 
-      /director/i, /analyst/i, /consultant/i, /designer/i, /architect/i
+      /(?:position|role|title|job)\s*:?\s*([A-Za-z\s&-]+?)(?:\s|$|,|\.)/gi,
+      /(?:as|for)\s+(?:a|an)?\s*([A-Za-z\s&-]+?)\s+(?:position|role)/gi,
+      /hire.*?(?:as|for)\s+(?:a|an)?\s*([A-Za-z\s&-]+)/gi,
+      /software\s+(?:developer|engineer)/gi,
+      /senior\s+[A-Za-z\s]+/gi,
+      /lead\s+[A-Za-z\s]+/gi,
+      /(?:product|project|engineering|marketing|sales|hr|human resources)\s+manager/gi
     ];
+    
     for (const pattern of jobTitlePatterns) {
-      const match = conversationText.match(pattern);
+      const match = originalText.match(pattern);
       if (match) {
-        params['Job Title'] = match[0];
+        let title = match[1] || match[0];
+        title = title.replace(/^(as|for|a|an)\s+/gi, '').trim();
+        if (title.length > 3 && title.length < 50) {
+          params['Job Title'] = title;
+          console.log('Extracted job title:', title);
+          break;
+        }
+      }
+    }
+    
+    // Extract company information
+    const companyPatterns = [
+      /(?:company|organization|employer)\s*:?\s*([A-Z][a-zA-Z\s&,.-]+?)(?:\s|$|,|\.)/gi,
+      /(?:at|for|with)\s+([A-Z][a-zA-Z\s&,.-]+?)(?:\s+(?:company|corp|inc|llc)|$)/gi,
+      /work\s+(?:at|for)\s+([A-Z][a-zA-Z\s&,.-]+)/gi
+    ];
+    
+    for (const pattern of companyPatterns) {
+      const match = originalText.match(pattern);
+      if (match && match[1]) {
+        const company = match[1].trim().replace(/\s+/g, ' ');
+        if (company.length > 2 && company.length < 50 && !company.match(/^(the|a|an)$/i)) {
+          params['Company Name'] = company;
+          params['Client Name'] = company;
+          console.log('Extracted company:', company);
+          break;
+        }
+      }
+    }
+    
+    // Extract employee name
+    const namePatterns = [
+      /(?:employee|candidate|hire)\s*:?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/gi,
+      /(?:hiring|for)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/gi,
+      /name\s*:?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/gi
+    ];
+    
+    for (const pattern of namePatterns) {
+      const match = originalText.match(pattern);
+      if (match && match[1]) {
+        params['Employee Name'] = match[1].trim();
+        params['Other Party Name'] = match[1].trim();
+        console.log('Extracted employee name:', match[1]);
         break;
       }
     }
     
-    // Extract company name (look for patterns like "at CompanyName" or "for CompanyName")
-    const companyMatch = conversationText.match(/(?:at|for|with|company)\s+([A-Z][a-zA-Z\s&]+)/i);
-    if (companyMatch) {
-      params['Company Name'] = companyMatch[1].trim();
-    }
-    
-    // Extract employee name
-    const nameMatch = conversationText.match(/(?:employee|hire|hiring)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i);
-    if (nameMatch) {
-      params['Employee Name'] = nameMatch[1];
-    }
-    
-    // Extract work location/arrangement
-    if (text.includes('remote')) {
-      params['Work Location'] = 'Remote work arrangement';
+    // WORK ARRANGEMENT & LOCATION
+    if (text.includes('remote') && !text.includes('no remote')) {
+      if (text.includes('fully remote') || text.includes('100% remote')) {
+        params['Work Arrangement'] = 'Fully remote work arrangement';
+      } else {
+        params['Work Arrangement'] = 'Remote work allowed';
+      }
     } else if (text.includes('hybrid')) {
-      params['Work Location'] = 'Hybrid work arrangement';
-    } else if (text.includes('office')) {
-      params['Work Location'] = 'Office-based';
+      params['Work Arrangement'] = 'Hybrid work arrangement (office + remote)';
+    } else if (text.includes('office') || text.includes('on-site')) {
+      params['Work Arrangement'] = 'On-site office-based work';
     }
     
-    // Extract benefits info
-    if (text.includes('health insurance') || text.includes('health benefits')) {
-      params['Health Insurance'] = 'Health insurance benefits included';
+    // Extract specific work location
+    const locationMatch = originalText.match(/(?:located?|based)\s+in\s+([A-Za-z\s,]+?)(?:\s|$|,|\.)/gi);
+    if (locationMatch) {
+      params['Work Location'] = locationMatch[0].replace(/^(located?|based)\s+in\s+/gi, '').trim();
     }
     
+    // BENEFITS & COMPENSATION DETAILS
+    
+    // Health insurance details
+    if (text.includes('health') && (text.includes('insurance') || text.includes('benefits'))) {
+      if (text.includes('full') || text.includes('100%')) {
+        params['Health Insurance'] = 'Full health insurance coverage provided';
+      } else if (text.includes('partial') || text.includes('%')) {
+        const percentMatch = text.match(/(\d+)%.*health/gi);
+        if (percentMatch) {
+          params['Health Insurance'] = `${percentMatch[1]}% health insurance coverage`;
+        } else {
+          params['Health Insurance'] = 'Partial health insurance coverage';
+        }
+      } else {
+        params['Health Insurance'] = 'Health insurance benefits included';
+      }
+    }
+    
+    // Dental and vision
+    if (text.includes('dental')) {
+      params['Dental Insurance'] = 'Dental insurance coverage included';
+    }
+    if (text.includes('vision')) {
+      params['Vision Insurance'] = 'Vision insurance coverage included';
+    }
+    
+    // 401k and retirement
     if (text.includes('401k') || text.includes('retirement')) {
-      params['Retirement Benefits'] = '401(k) retirement plan';
+      const matchPercent = text.match(/(\d+)%.*(?:match|401k|retirement)/gi);
+      if (matchPercent) {
+        params['Retirement Benefits'] = `401(k) with ${matchPercent[1]}% company match`;
+      } else {
+        params['Retirement Benefits'] = '401(k) retirement plan available';
+      }
     }
     
-    // Extract PTO/vacation
-    const ptoMatch = text.match(/(\d+)\s+days?\s+(?:pto|vacation|time off)/i);
-    if (ptoMatch) {
-      params['PTO'] = `${ptoMatch[1]} days paid time off`;
+    // PTO/Vacation detailed extraction
+    const ptoPatterns = [
+      /(\d+)\s+days?\s+(?:of\s+)?(?:pto|paid time off|vacation)/gi,
+      /(\d+)\s+weeks?\s+(?:of\s+)?(?:vacation|pto)/gi,
+      /vacation\s*:?\s*(\d+)\s+(?:days?|weeks?)/gi
+    ];
+    
+    for (const pattern of ptoPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const amount = match[1];
+        if (match[0].includes('week')) {
+          params['PTO Policy'] = `${amount} weeks paid time off annually`;
+          params['Annual PTO Days'] = (parseInt(amount) * 5).toString();
+        } else {
+          params['PTO Policy'] = `${amount} days paid time off annually`;
+          params['Annual PTO Days'] = amount;
+        }
+        console.log('Extracted PTO:', params['PTO Policy']);
+        break;
+      }
     }
     
-    // Extract probation period
-    const probationMatch = text.match(/(\d+)\s*day\s*probation/i);
-    if (probationMatch) {
-      params['Probation Period'] = `${probationMatch[1]} day probation period`;
+    // Sick leave
+    const sickLeaveMatch = text.match(/(\d+)\s+(?:days?|hours?)\s+(?:of\s+)?sick\s+(?:leave|time)/gi);
+    if (sickLeaveMatch) {
+      params['Sick Leave'] = sickLeaveMatch[0];
     }
     
-    console.log('Extracted parameters from conversation:', params);
+    // EMPLOYMENT TERMS & CONDITIONS
+    
+    // Probation period with multiple formats
+    const probationPatterns = [
+      /(\d+)[-\s]?(?:day|month)\s+probation/gi,
+      /probation[ary]*\s+period[\s:]*\s*(\d+)\s*(?:days?|months?)/gi,
+      /(\d+)\s*(?:days?|months?)\s*probation/gi
+    ];
+    
+    for (const pattern of probationPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const period = match[1];
+        const unit = match[0].includes('month') ? 'months' : 'days';
+        params['Probation Period'] = `${period} ${unit} probationary period`;
+        params['Probationary Period Length'] = `${period} ${unit}`;
+        console.log('Extracted probation:', params['Probation Period']);
+        break;
+      }
+    }
+    
+    // Performance review schedule
+    if (text.includes('review') && (text.includes('annual') || text.includes('yearly'))) {
+      params['Performance Reviews'] = 'Annual performance reviews';
+    } else if (text.includes('review') && (text.includes('quarterly') || text.includes('90 day'))) {
+      params['Performance Reviews'] = 'Quarterly performance reviews';
+    } else if (text.includes('review') && text.includes('monthly')) {
+      params['Performance Reviews'] = 'Monthly performance reviews';
+    }
+    
+    // EQUITY & STOCK OPTIONS
+    if (text.includes('equity') || text.includes('stock options') || text.includes('shares')) {
+      const equityPatterns = [
+        /(\d+(?:,\d{3})*)\s+(?:shares|stock options|equity)/gi,
+        /(\d+\.\d+)%\s+equity/gi,
+        /equity\s*:?\s*(\d+(?:,\d{3})*|\d+\.\d+%)/gi
+      ];
+      
+      for (const pattern of equityPatterns) {
+        const match = text.match(pattern);
+        if (match) {
+          params['Equity Compensation'] = match[0];
+          console.log('Extracted equity:', match[0]);
+          break;
+        }
+      }
+      
+      // Vesting schedule
+      if (text.includes('vest') || text.includes('cliff')) {
+        const vestMatch = text.match(/(\d+)\s*year\s*(?:cliff|vesting)/gi);
+        if (vestMatch) {
+          params['Vesting Schedule'] = vestMatch[0];
+        } else {
+          params['Vesting Schedule'] = 'Standard vesting schedule applies';
+        }
+      }
+    }
+    
+    // TERMINATION & SEVERANCE
+    const severancePatterns = [
+      /(\d+)\s+(?:weeks?|months?)\s+severance/gi,
+      /severance\s*:?\s*(\d+)\s*(?:weeks?|months?)/gi
+    ];
+    
+    for (const pattern of severancePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        params['Severance Policy'] = match[0];
+        console.log('Extracted severance:', match[0]);
+        break;
+      }
+    }
+    
+    // Notice period
+    const noticePatterns = [
+      /(\d+)\s+(?:weeks?|days?)\s+notice/gi,
+      /notice\s+period\s*:?\s*(\d+)\s*(?:weeks?|days?)/gi,
+      /(\d+)[-\s]?(?:week|day)\s+notice/gi
+    ];
+    
+    for (const pattern of noticePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        params['Notice Period'] = match[0];
+        break;
+      }
+    }
+    
+    // CONFIDENTIALITY & IP
+    if (text.includes('confidential') || text.includes('nda') || text.includes('non-disclosure')) {
+      params['Confidentiality'] = 'Confidentiality and non-disclosure provisions included';
+      
+      // Duration of confidentiality
+      const confDurationMatch = text.match(/(\d+)\s*years?\s*(?:after|post|following).*(?:termination|confidential)/gi);
+      if (confDurationMatch) {
+        params['Confidentiality Duration'] = confDurationMatch[0];
+      }
+    }
+    
+    // IP assignment
+    if (text.includes('intellectual property') || text.includes('ip assignment') || text.includes('inventions')) {
+      params['IP Assignment'] = 'Intellectual property assignment clause included';
+    }
+    
+    // NON-COMPETE & NON-SOLICIT
+    if (text.includes('non-compete') || text.includes('noncompete')) {
+      const nonCompeteMatch = text.match(/(\d+)\s*(?:years?|months?)\s*non[- ]?compete/gi);
+      if (nonCompeteMatch) {
+        params['Non-Compete Period'] = nonCompeteMatch[0];
+      } else {
+        params['Non-Compete'] = 'Non-compete restrictions apply';
+      }
+    }
+    
+    if (text.includes('non-solicit') || text.includes('nonsolicitation')) {
+      const nonSolicitMatch = text.match(/(\d+)\s*(?:years?|months?)\s*non[- ]?solicit/gi);
+      if (nonSolicitMatch) {
+        params['Non-Solicitation Period'] = nonSolicitMatch[0];
+      } else {
+        params['Non-Solicitation'] = 'Non-solicitation restrictions apply';
+      }
+    }
+    
+    // EXPENSE REIMBURSEMENT
+    if (text.includes('expense') && (text.includes('reimburse') || text.includes('reimbursement'))) {
+      const expenseMatch = text.match(/(\d+)\s*days?\s*(?:for\s+)?(?:expense\s+)?reimbursement/gi);
+      if (expenseMatch) {
+        params['Expense Reimbursement'] = `Expenses reimbursed within ${expenseMatch[1]} days`;
+      } else {
+        params['Expense Reimbursement'] = 'Business expense reimbursement provided';
+      }
+    }
+    
+    // BONUS STRUCTURE
+    const bonusPatterns = [
+      /(\d+)%\s*(?:annual\s+)?bonus/gi,
+      /bonus\s*:?\s*\$(\d+(?:,\d{3})*)/gi,
+      /\$(\d+(?:,\d{3})*)\s*(?:annual\s+)?bonus/gi
+    ];
+    
+    for (const pattern of bonusPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        params['Bonus Structure'] = match[0];
+        console.log('Extracted bonus:', match[0]);
+        break;
+      }
+    }
+    
+    // JURISDICTION & GOVERNING LAW
+    const jurisdictionMatch = originalText.match(/(?:california|ca|new york|ny|texas|tx|florida|fl)\s+law/gi);
+    if (jurisdictionMatch) {
+      params['Governing Law'] = jurisdictionMatch[0];
+    } else if (!params['Governing Law']) {
+      params['Governing Law'] = 'California';
+    }
+    
+    // START DATE
+    const startDatePatterns = [
+      /start(?:ing)?\s+(?:date|on)?\s*:?\s*([A-Za-z]+ \d{1,2},? \d{4})/gi,
+      /begin(?:ning)?\s+([A-Za-z]+ \d{1,2},? \d{4})/gi,
+      /effective\s+([A-Za-z]+ \d{1,2},? \d{4})/gi
+    ];
+    
+    for (const pattern of startDatePatterns) {
+      const match = originalText.match(pattern);
+      if (match) {
+        params['Start Date'] = match[1];
+        break;
+      }
+    }
+    
+    // REPORTING STRUCTURE
+    const reportsToMatch = originalText.match(/reports?\s+to\s+([A-Za-z\s,]+?)(?:\s|$|,|\.)/gi);
+    if (reportsToMatch) {
+      params['Reports To'] = reportsToMatch[0].replace(/^reports?\s+to\s+/gi, '').trim();
+    }
+    
+    // WORK SCHEDULE
+    if (text.includes('full time') || text.includes('full-time')) {
+      params['Employment Type'] = 'Full-time';
+    } else if (text.includes('part time') || text.includes('part-time')) {
+      params['Employment Type'] = 'Part-time';
+    } else if (text.includes('contract') || text.includes('contractor')) {
+      params['Employment Type'] = 'Contract';
+    }
+    
+    // Work hours
+    const hoursMatch = text.match(/(\d+)\s*hours?\s*(?:per\s+)?week/gi);
+    if (hoursMatch) {
+      params['Work Hours'] = hoursMatch[0];
+    }
+    
+    console.log('Master Input Brief - Final extracted parameters:', params);
     return params;
   };
 
@@ -326,7 +639,14 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
       setAbortController(null);
     }
     setIsTyping(false);
-    addMessage('bot', "Generation stopped. How can I help you with your contract?");
+    
+    // Add stop message only if there's no existing bot message in progress
+    // This prevents the message vanishing issue
+    setTimeout(() => {
+      if (!isTyping) {
+        addMessage('bot', "Generation stopped. How can I help you continue with your contract?");
+      }
+    }, 100);
   };
 
   const handleSend = async () => {
@@ -416,12 +736,25 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
       console.error('Force generation error:', error);
       addMessage('bot', "I'll generate the contract with the information we have. Let me create it now.");
       
-      // Fallback generation
+      // Fallback generation with comprehensive parameters
+      const conversationText = messages.map(m => m.content).join(' ');
+      const fallbackParams = extractParametersFromConversation(conversationText, sessionData.extractedParams);
+      
       const contractParams = {
         contractType: "employment_agreement",
-        parameters: sessionData.extractedParams,
+        parameters: {
+          ...fallbackParams,
+          'State': 'California',
+          'Governing Law': 'California',
+          'Jurisdiction': 'California'
+        },
         preferences: { risk_tolerance: 'moderate', legal_stance: 'neutral' },
-        conversationalData: sessionData
+        conversationalData: {
+          ...sessionData,
+          conversationSummary: conversationText,
+          extractedParams: fallbackParams
+        },
+        generationMethod: "conversational_ai"
       };
 
       onContractGenerate(contractParams);
