@@ -36,6 +36,10 @@ app.use(morgan('combined'));app.use(express.json());
 // --- AI Interpreter ---
 app.use('/api/ai', authenticateToken, aiInterpreter);
 
+// --- Subscription Service ---
+const subscriptionService = require('./src/subscription-service.js');
+app.use('/api/user', subscriptionService);
+
 // --- Prometheus metrics ---
 const register = new prom.Registry();
 prom.collectDefaultMetrics({ register });

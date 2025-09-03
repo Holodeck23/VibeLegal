@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileText, Loader2 } from 'lucide-react';
 import config from '../config.js';
 import { EnhancedContractBuilder } from './EnhancedContractBuilder';
+import { ConversationalContractBuilder } from './ConversationalContractBuilder';
 
 const ContractForm = () => {
   const [formData, setFormData] = useState({
@@ -24,6 +25,14 @@ const ContractForm = () => {
   const navigate = useNavigate();
 
   const [isEnhancedMode, setIsEnhancedMode] = useState(true);
+  const [useConversationalAI, setUseConversationalAI] = useState(false);
+
+  // Reset conversational AI toggle when switching out of enhanced mode
+  useEffect(() => {
+    if (!isEnhancedMode) {
+      setUseConversationalAI(false);
+    }
+  }, [isEnhancedMode]);
   // MVP: Limited to California Employment Contracts only
   const contractTypes = [
     { value: 'Employment Agreement', label: 'Employment Agreement' }
@@ -227,28 +236,61 @@ const ContractForm = () => {
                 <CardTitle>Contract Details</CardTitle>
                 <CardDescription>Fill out the form below to generate your contract</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={isEnhancedMode ? "text-gray-500" : "font-medium"}>Basic</span>
-                <button
-                  onClick={() => setIsEnhancedMode(!isEnhancedMode)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    isEnhancedMode ? "bg-blue-600" : "bg-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      isEnhancedMode ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-                <span className={isEnhancedMode ? "font-medium text-blue-600" : "text-gray-500"}>
-                  Pro <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">ENHANCED</span>
-                </span>
+              <div className="flex items-center justify-end">
+                <div className="flex items-center gap-4">
+                  {/* Basic/Pro Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className={isEnhancedMode ? "text-gray-500" : "font-medium text-sm"}>Basic</span>
+                    <button
+                      onClick={() => setIsEnhancedMode(!isEnhancedMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        isEnhancedMode ? "bg-blue-600" : "bg-gray-200"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          isEnhancedMode ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <span className={isEnhancedMode ? "font-medium text-blue-600 text-sm" : "text-gray-500 text-sm"}>
+                      Pro <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">ENHANCED</span>
+                    </span>
+                  </div>
+
+                  {/* Conversational AI Toggle (with consistent spacing) */}
+                  <div className={`flex items-center gap-2 border-l pl-4 transition-opacity ${
+                    isEnhancedMode ? 'opacity-100' : 'opacity-50 pointer-events-none'
+                  }`}>
+                    <span className={!useConversationalAI ? "font-medium text-sm" : "text-gray-500 text-sm"}>Form</span>
+                    <button
+                      onClick={() => isEnhancedMode && setUseConversationalAI(!useConversationalAI)}
+                      disabled={!isEnhancedMode}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        useConversationalAI && isEnhancedMode ? "bg-purple-600" : "bg-gray-200"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          useConversationalAI && isEnhancedMode ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <span className={useConversationalAI && isEnhancedMode ? "font-medium text-purple-600 text-sm" : "text-gray-500 text-sm"}>
+                      AI Chat <span className="text-xs bg-purple-100 text-purple-800 px-1 rounded">NEW</span>
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            {isEnhancedMode ? (
+            {isEnhancedMode && useConversationalAI ? (
+              <ConversationalContractBuilder 
+                onContractGenerate={handleEnhancedGenerate}
+                isLoading={loading}
+              />
+            ) : isEnhancedMode ? (
               <EnhancedContractBuilder 
                 onGenerate={handleEnhancedGenerate}
                 isLoading={loading}
