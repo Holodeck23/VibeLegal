@@ -7,8 +7,8 @@ const Footer = () => {
 
   const socialLinks = [
     {
-      name: 'Twitter',
-      href: 'https://twitter.com/vibelegal',
+      name: 'X (Twitter)',
+      href: 'https://x.com/vibelegal',
       icon: Twitter
     },
     {
