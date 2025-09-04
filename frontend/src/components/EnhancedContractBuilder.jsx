@@ -6,6 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AdvancedContractCustomizer } from './AdvancedContractCustomizer';
+import { ClauseSelector } from './ClauseSelector';
+import { ChevronDown, ChevronUp, Settings, FileText } from 'lucide-react';
 
 export function EnhancedContractBuilder({ onGenerate, isLoading }) {
   const [preferences, setPreferences] = useState({
@@ -21,6 +25,11 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
     jurisdiction: 'California'
   });
 
+  const [showAdvancedCustomizer, setShowAdvancedCustomizer] = useState(false);
+  const [showClauseSelector, setShowClauseSelector] = useState(false);
+  const [advancedPreferences, setAdvancedPreferences] = useState(null);
+  const [selectedClauses, setSelectedClauses] = useState({});
+
   // MVP: Limited to California Employment Contracts only
   const contractTypes = [
     { value: 'Employment Agreement', label: 'Employment Agreement' }
@@ -33,6 +42,14 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
     if (!contractData.contractType || !contractData.requirements || !contractData.clientName || 
         !contractData.otherPartyName || !contractData.jurisdiction) {
       return;
+    }
+
+    // Merge basic and advanced preferences, and include specific clause selections
+    const finalPreferences = advancedPreferences ? advancedPreferences : preferences;
+    
+    // Include specific clause variations if selected
+    if (Object.keys(selectedClauses).length > 0) {
+      finalPreferences.clause_variations = selectedClauses;
     }
 
     onGenerate({
@@ -66,7 +83,7 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
         jurisdiction: contractData.jurisdiction,
         requirements: contractData.requirements
       },
-      preferences: preferences
+      preferences: finalPreferences
     });
   };
 
@@ -210,6 +227,41 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
               </div>
             </div>
           </div>
+
+          {/* Specific Clause Selection */}
+          <Collapsible open={showClauseSelector} onOpenChange={setShowClauseSelector}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Specific Clause Selection ({Object.keys(selectedClauses).length} selected)
+                {showClauseSelector ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <ClauseSelector onClauseSelectionChange={setSelectedClauses} />
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Advanced Customization Section */}
+          <Collapsible open={showAdvancedCustomizer} onOpenChange={setShowAdvancedCustomizer}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Advanced Contract Customization (Slider Controls)
+                {showAdvancedCustomizer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <AdvancedContractCustomizer
+                  contractData={contractData}
+                  onUpdate={setAdvancedPreferences}
+                  onPreview={() => {}} // Preview handled separately
+                  isGenerating={isLoading}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <Button 
             onClick={handleGenerate}

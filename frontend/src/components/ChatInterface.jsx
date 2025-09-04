@@ -93,7 +93,13 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
   };
 
   useEffect(() => {
-    scrollToBottom();
+    // Only scroll if there's more than just the initial message or if user has sent messages
+    if (messages.length > 1 || (messages.length === 1 && messages[0].sender === 'user')) {
+      // Add a small delay to prevent jarring immediate scroll on component mount
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
   }, [messages]);
 
   // Load recent chat session on component mount
@@ -201,14 +207,17 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
 
   // Start a new chat conversation
   const handleNewChat = () => {
+    // Reset all conversation state
     setMessages([
       {
-        id: 1,
+        id: Date.now(), // Use timestamp for unique ID
         type: 'bot',
         content: "Hi! I'm your AI legal assistant. I'll help you create a professional employment contract through a simple conversation. Let's start with the basics - what type of employment agreement are you looking to create today?",
         timestamp: new Date()
       }
     ]);
+    
+    // Reset session data to initial state
     setSessionData({
       contractType: '',
       clientName: '',
@@ -218,15 +227,20 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
       step: 'contract_type',
       extractedParams: {}
     });
+    
+    // Clear current session and reset UI state
     setCurrentSessionId(null);
     setProgressIndicator('0% complete');
     setCanForceGenerate(false);
-    console.log('Started new chat conversation');
+    setIsTyping(false);
+    setInput('');
+    
+    console.log('New chat conversation started - all state reset');
   };
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
-      scrollRef.current.scrollIntoView({ behavior: 'smooth' });
+      scrollRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   };
 
