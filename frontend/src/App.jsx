@@ -9,9 +9,11 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ContractForm from './components/ContractForm';
 import ContractResult from './components/ContractResult';
+import ContractViewer from './components/ContractViewer';
 import Dashboard from './components/Dashboard';
 import Pricing from './components/Pricing';
-import DemoNotice from './components/DemoNotice';
+import { FeedbackButton } from './components/FeedbackButton';
+import Footer from './components/Footer';
 
 // Context for authentication
 export const AuthContext = React.createContext();
@@ -89,7 +91,6 @@ function App() {
     <AuthContext.Provider value={{ user, login, logout, handleAuthError }}>
       <Router>
         <div className="min-h-screen bg-gray-50">
-          <DemoNotice />
           <Navbar />
           <Routes>
             <Route path="/" element={<LandingPage />} />
@@ -108,7 +109,13 @@ function App() {
               path="/contract-result" 
               element={user ? <ContractResult /> : <Navigate to="/login" />} 
             />
+            <Route 
+              path="/contracts/:id" 
+              element={user ? <ContractViewer /> : <Navigate to="/login" />} 
+            />
           </Routes>
+          <Footer />
+          <FeedbackButton />
         </div>
       </Router>
     </AuthContext.Provider>

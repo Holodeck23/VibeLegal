@@ -1,498 +1,271 @@
-🏴‍☠️ Arrr, ye be warned, matey!  
-This here repo be naught but a testin’ harbor fer AI webapp craftin’.  
-She’s full o’ strange code currents, experimentin’ tides, an’ prototype galleons not yet seaworthy.  
-Board at yer own risk, and keep yer cutlass sharp — we be sailin’ the seas o’ development!
-# VibeLegal - AI-Powered Contract Drafting for Lawyers
+# VibeLegal - AI-Powered Legal Contract Generation
 
-VibeLegal is a minimal viable product (MVP) that demonstrates an AI-powered contract drafting web application specifically designed for legal professionals. The application combines modern web technologies with OpenAI's GPT models to generate professional, legally compliant contracts quickly and efficiently.
+VibeLegal is an AI-powered contract drafting platform that transforms how legal professionals create employment contracts. Built specifically for California employment law, it features conversational AI, advanced customization controls, and comprehensive legal compliance.
 
-## 🚀 Features
+## 🎯 Current Status (MVP)
+- **Focus**: California Employment Agreements  
+- **Status**: Feature-complete MVP with payment infrastructure  
+- **Users**: 0 paying customers (ready to monetize)  
+- **Recent**: Master Input Brief framework for comprehensive contract intelligence
 
-### Core Functionality
-- **AI-Powered Contract Generation**: Generate professional contracts using OpenAI's GPT models
-- **Multiple Contract Types**: Support for Employment Agreements, NDAs, Service Contracts, Independent Contractor Agreements, and Purchase Agreements
-- **User Authentication**: Secure registration and login system with JWT tokens
-- **Contract Management**: Save, edit, and manage generated contracts
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Professional UI**: Clean, modern interface designed specifically for lawyers
+## 🚀 Core Features
 
-### Technical Features
-- **RESTful API**: Well-structured backend API with proper error handling
-- **Rate Limiting**: Prevents abuse and ensures fair usage
-- **Legal Disclaimers**: All contracts include proper legal disclaimers
-- **Subscription Management**: Basic and Premium tier support
-- **PDF Export**: Download contracts as HTML files (easily convertible to PDF)
+### Legal Intelligence
+- **Master Input Brief System**: 50+ parameter extraction patterns for comprehensive legal analysis  
+- **California Employment Law Compliance**: 2025-compliant wage, hour, meal/rest period requirements  
+- **Strategic Legal AI**: Employment law attorney persona with risk assessment  
+- **Employer Protection Focus**: IP assignment, confidentiality, severance, non-compete coverage  
+
+### Conversational Interface
+- **Natural Language Processing**: Create contracts through conversation  
+- **Resume Capability**: Continue contract creation across sessions  
+- **Parameter Extraction**: Automatic identification of legal terms and conditions  
+- **Progress Tracking**: Real-time contract building with state management  
+
+### Advanced Customization
+- **Risk Tolerance Controls**: Employer-friendly to employee-favorable spectrum  
+- **Legal Stance Selection**: Conservative, balanced, or progressive approaches  
+- **Clause Library**: 99 professionally crafted legal variations  
+- **Contract Templates**: 5 professional variations for different use cases  
+
+### Subscription & Payments
+- **Stripe Integration**: Full payment processing with webhook support  
+- **Tiered Access**: Basic (5 contracts/month), Pro (unlimited), Enterprise  
+- **Feature Gating**: Progressive feature unlocking based on subscription tier  
+- **Usage Tracking**: Real-time contract generation monitoring
 
 ## 🏗️ Architecture
 
 ### Frontend (React + Tailwind CSS)
-- **Framework**: React 18 with modern hooks
-- **Styling**: Tailwind CSS with shadcn/ui components
-- **Routing**: React Router for navigation
-- **State Management**: React Context for authentication
-- **Icons**: Lucide React icons
-- **Build Tool**: Vite for fast development and building
+- **Framework**: React 18 with modern hooks and context  
+- **UI Components**: shadcn/ui with Tailwind CSS styling  
+- **State Management**: React Context for authentication and app state  
+- **Routing**: React Router with protected routes  
+- **Icons**: Lucide React for consistent iconography  
 
 ### Backend (Node.js + Express)
-- **Runtime**: Node.js with Express.js framework
-- **Database**: PostgreSQL with native pg driver
-- **Authentication**: JWT tokens with bcryptjs for password hashing
-- **AI Integration**: OpenAI API for contract generation
-- **Security**: CORS enabled, rate limiting, input validation
+- **Runtime**: Node.js with Express.js framework  
+- **Database**: PostgreSQL with comprehensive subscription schema  
+- **Authentication**: JWT tokens with bcryptjs password hashing  
+- **AI Integration**: OpenAI/Gemini models with custom legal prompting  
+- **Payment Processing**: Stripe integration with webhook handling  
+- **Legal Engine**: Master Input Brief composer with 60+ parameter mapping  
+- **Security**: CORS, rate limiting, input validation, webhook signature verification
 
 ### Database Schema
-- **Users Table**: User accounts with subscription tiers and usage tracking
-- **Contracts Table**: Generated contracts with metadata and content
+- **Users**: Account management with Stripe customer integration  
+- **User Subscriptions**: Comprehensive subscription management with billing cycles  
+- **Contracts**: Generated contracts with search/filter capabilities  
+- **Chat Sessions**: Conversation state preservation for resume functionality  
+- **Payment History**: Transaction tracking and billing management  
+- **Subscription Usage**: Feature usage analytics and tier enforcement
 
 ## 📋 Prerequisites
 
-Before setting up VibeLegal, ensure you have the following installed:
-
-- **Node.js** (v18 or higher)
-- **npm** or **pnpm**
-- **PostgreSQL** (v12 or higher)
-- **OpenAI API Key** (for contract generation)
+- **Node.js** (v18 or higher)  
+- **npm** or **pnpm**  
+- **PostgreSQL** (v12 or higher)  
+- **OpenAI API Key** (for contract generation)  
+- **Stripe Account** (for payment processing)
 
 ## 🛠️ Installation & Setup
 
-### 1. Clone the Repository
+### 1. Clone and Install
+
 ```bash
 git clone <repository-url>
 cd vibelegal
-```
 
-### 2. Backend Setup
-
-#### Install Dependencies
-```bash
+# Backend setup
 cd backend
+npm install
+
+# Frontend setup  
+cd ../frontend
 npm install
 ```
 
-#### Environment Configuration
-Create a `.env` file in the backend directory:
+### 2. Environment Configuration
+
+Create `.env` file in the backend directory:
+
 ```env
 PORT=5000
 DATABASE_URL=postgresql://username:password@localhost:5432/vibelegal
 OPENAI_API_KEY=<your_openai_api_key>
 JWT_SECRET=<your_jwt_secret>
+
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+STRIPE_PRO_MONTHLY_PRICE_ID=price_pro_monthly_id
+STRIPE_PRO_YEARLY_PRICE_ID=price_pro_yearly_id
+FRONTEND_URL=http://localhost:5173
 ```
 
-#### Database Setup
-1. Create a PostgreSQL database named `vibelegal`
-2. Run the database schema:
+### 3. Database Setup
+
 ```bash
+cd backend
+
+# Create database
+createdb vibelegal
+
+# Run base schema
 psql -d vibelegal -f database.sql
+
+# Run Stripe integration migration
+psql -d vibelegal -f stripe-migration.sql
 ```
 
-#### Start Backend Server
+### 4. Stripe Setup (Optional)
+
 ```bash
-# Development mode
+# Auto-create Stripe products and prices
+node setup-stripe.js
+
+# Copy generated price IDs to .env file
+# Set up webhook endpoint: /api/user/webhook/stripe in Stripe Dashboard
+```
+
+### 5. Start Development Servers
+
+```bash
+# Backend (Terminal 1)
+cd backend
 npm run dev
 
-# Production mode
-npm start
-```
-
-The backend will be available at `http://localhost:5000`
-
-### 3. Frontend Setup
-
-#### Install Dependencies
-```bash
+# Frontend (Terminal 2)  
 cd frontend
-npm install
-```
-
-#### Start Development Server
-```bash
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173` (or another port if 5173 is occupied)
+Access the application at `http://localhost:5173`
 
-### 4. Verify Installation
+## 💰 Subscription Tiers
 
-1. Open your browser and navigate to the frontend URL
-2. You should see the VibeLegal landing page
-3. Try registering a new account (requires backend and database to be running)
-4. Test contract generation (requires valid OpenAI API key)
+### Basic (Free)
+- **Contracts**: 5 per month  
+- **Features**: Basic contract generation  
+- **Target**: Individual lawyers testing the platform  
 
-## 🚀 Deployment
+### Pro ($29/month, $290/year)
+- **Contracts**: Unlimited  
+- **Features**: Conversational AI, advanced customization, risk controls  
+- **Target**: Solo practitioners and small firms  
+- **Savings**: 17% with annual billing  
 
-### Backend Deployment
+### Enterprise ($99/month, $990/year)
+- **Contracts**: Unlimited  
+- **Features**: Everything in Pro plus team collaboration, analytics  
+- **Target**: Law firms and legal departments  
+- **Savings**: 17% with annual billing
 
-#### Environment Variables
-Ensure the following environment variables are set in your production environment:
-- `PORT`: Server port (default: 5000)
-- `DATABASE_URL`: PostgreSQL connection string
-- `OPENAI_API_KEY`: Your OpenAI API key
-- `JWT_SECRET`: Secret key for JWT token signing
+## 🎯 Deployment Ready
 
-#### Production Considerations
-- Use a process manager like PM2 for Node.js applications
-- Set up SSL/TLS certificates for HTTPS
-- Configure a reverse proxy (nginx) for better performance
-- Set up database backups and monitoring
-- Implement logging and error tracking
+### Payment Infrastructure ✅
+- Stripe integration with webhook support  
+- Subscription management and billing  
+- Feature gating and usage enforcement  
+- Payment success/failure handling  
 
-### Frontend Deployment
+### Legal Compliance ✅
+- California employment law compliance  
+- 2025 wage and hour requirements  
+- Meal/rest period regulations  
+- Fair Chance Act compliance  
 
-#### Build for Production
-```bash
-cd frontend
-npm run build
-```
+### User Experience ✅
+- Conversational contract creation  
+- Advanced customization controls  
+- Contract search and management  
+- Mobile-responsive design  
 
-#### Deploy Static Files
-The `dist` folder contains all static files that can be deployed to:
-- **Static Hosting**: Netlify, Vercel, GitHub Pages
-- **CDN**: AWS CloudFront, Cloudflare
-- **Web Server**: nginx, Apache
+### Technical Infrastructure ✅
+- Scalable backend architecture  
+- Comprehensive database schema  
+- Authentication and authorization  
+- Error handling and logging  
 
-#### Environment Configuration
-Update API endpoints in the frontend code to point to your production backend URL.
+## 📊 Growth Roadmap
 
-### Database Deployment
+### Phase 1: Market Validation (Current)
+- **Goal**: Find paying customers  
+- **Focus**: California employment contracts  
+- **Metrics**: User acquisition, conversion rates  
 
-#### Production Database Setup
-1. Set up a PostgreSQL instance (AWS RDS, Google Cloud SQL, etc.)
-2. Run the database schema from `backend/database.sql`
-3. Configure connection pooling for better performance
-4. Set up regular backups
-5. Monitor database performance and usage
+### Phase 2: Contract Type Expansion
+- **NDAs**: Non-disclosure agreements  
+- **Service Agreements**: Independent contractor agreements  
+- **Purchase Agreements**: Basic commercial contracts  
 
-## 📖 API Documentation
+### Phase 3: Geographic Expansion
+- **New York**: Employment law compliance  
+- **Texas**: State-specific regulations  
+- **Florida**: Regional legal requirements  
 
-### Authentication Endpoints
-
-#### POST /api/register
-Register a new user account.
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "securepassword"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "User created successfully",
-  "token": "jwt_token_here",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "subscription_tier": "basic"
-  }
-}
-```
-
-#### POST /api/login
-Authenticate an existing user.
-
-**Request Body:**
-```json
-{
-  "email": "user@example.com",
-  "password": "securepassword"
-}
-```
-
-**Response:**
-```json
-{
-  "message": "Login successful",
-  "token": "jwt_token_here",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "subscription_tier": "basic",
-    "contracts_used_this_month": 5
-  }
-}
-```
-
-### Contract Endpoints
-
-#### POST /api/generate-contract
-Generate a new contract using AI.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "contractType": "Employment Agreement",
-  "requirements": "Software developer position with 90-day probation, $80,000 salary",
-  "clientName": "Tech Corp Inc.",
-  "otherPartyName": "John Doe",
-  "jurisdiction": "California"
-}
-```
-
-**Response:**
-```json
-{
-  "contract": "Generated contract content...",
-  "contractType": "Employment Agreement",
-  "clientName": "Tech Corp Inc.",
-  "otherPartyName": "John Doe",
-  "jurisdiction": "California"
-}
-```
-
-#### POST /api/save-contract
-Save a contract to the database.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "title": "Employment Agreement - Tech Corp & John Doe",
-  "contractType": "Employment Agreement",
-  "content": "Contract content here..."
-}
-```
-
-#### GET /api/user-contracts
-Retrieve user's saved contracts.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response:**
-```json
-{
-  "contracts": [
-    {
-      "id": 1,
-      "title": "Employment Agreement - Tech Corp & John Doe",
-      "contract_type": "Employment Agreement",
-      "created_at": "2024-01-15T10:30:00Z"
-    }
-  ]
-}
-```
-
-#### GET /api/contracts/:id
-Retrieve a specific contract.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response:**
-```json
-{
-  "contract": {
-    "id": 1,
-    "title": "Employment Agreement - Tech Corp & John Doe",
-    "contract_type": "Employment Agreement",
-    "content": "Full contract content...",
-    "created_at": "2024-01-15T10:30:00Z"
-  }
-}
-```
-
-### Utility Endpoints
-
-#### GET /api/health
-Health check endpoint.
-
-**Response:**
-```json
-{
-  "status": "OK",
-  "timestamp": "2024-01-15T10:30:00Z"
-}
-```
-
-## 🔧 Configuration
-
-### OpenAI Configuration
-The application uses OpenAI's GPT-3.5-turbo model for contract generation. You can modify the model and parameters in `backend/server.js`:
-
-```javascript
-const completion = await openai.chat.completions.create({
-  model: "gpt-3.5-turbo", // or "gpt-4" for better quality
-  messages: [...],
-  max_tokens: 2000,
-  temperature: 0.3, // Lower for more consistent output
-});
-```
-
-### Rate Limiting
-Default rate limiting is set to 10 requests per minute per IP. Modify in `backend/server.js`:
-
-```javascript
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const MAX_REQUESTS = 10; // requests per window
-```
-
-### Subscription Tiers
-- **Basic**: 25 contracts per month
-- **Premium**: Unlimited contracts
-
-Modify limits in the contract generation endpoint as needed.
+### Phase 4: International Markets
+- **United Kingdom**: UK employment law  
+- **Canada**: Provincial regulations  
+- **European Union**: GDPR compliance  
+- **Australia**: Fair Work Act compliance
 
 ## 🧪 Testing
 
+### Test Account
+- **Email**: test2@vibelegal.com  
+- **Password**: password  
+- **Status**: 21 total contracts, 1 this month
+
 ### Manual Testing Checklist
+- [ ] User registration and authentication  
+- [ ] Contract generation through conversational AI  
+- [ ] Advanced customization controls  
+- [ ] Subscription upgrade flow  
+- [ ] Contract search and management  
+- [ ] Payment processing (test mode)  
+- [ ] Mobile responsive design
 
-#### Frontend Testing
-- [ ] Landing page loads correctly
-- [ ] Registration form works
-- [ ] Login form works
-- [ ] Navigation between pages
-- [ ] Responsive design on mobile
-- [ ] Contract form validation
-- [ ] Contract result display
-- [ ] Dashboard functionality
+## 🔧 Development Commands
 
-#### Backend Testing
-- [ ] Health check endpoint responds
-- [ ] User registration creates account
-- [ ] User login returns valid JWT
-- [ ] Contract generation with valid OpenAI key
-- [ ] Contract saving to database
-- [ ] Rate limiting prevents abuse
-- [ ] Error handling for invalid requests
+```bash
+# Backend
+cd backend
+npm start          # Production mode
+npm run dev        # Development with nodemon
+npm run setup-db   # Initialize database
+node setup-stripe.js  # Setup Stripe products
 
-#### Integration Testing
-- [ ] Frontend can communicate with backend
-- [ ] Authentication flow works end-to-end
-- [ ] Contract generation flow works
-- [ ] Error messages display correctly
-
-### Automated Testing
-Consider adding:
-- **Unit Tests**: Jest for backend logic
-- **Integration Tests**: Supertest for API endpoints
-- **E2E Tests**: Playwright or Cypress for frontend flows
-- **Load Testing**: Artillery or k6 for performance testing
-
-## 🔒 Security Considerations
-
-### Current Security Measures
-- **Password Hashing**: bcryptjs with salt rounds
-- **JWT Authentication**: Secure token-based authentication
-- **Rate Limiting**: Prevents API abuse
-- **Input Validation**: Basic validation on all endpoints
-- **CORS**: Configured for cross-origin requests
-
-### Additional Security Recommendations
-- **HTTPS**: Always use HTTPS in production
-- **Environment Variables**: Never commit secrets to version control
-- **Database Security**: Use connection pooling and prepared statements
-- **API Security**: Implement API versioning and additional validation
-- **Monitoring**: Set up logging and monitoring for security events
-
-## 📝 Legal Disclaimers
-
-### Important Notice
-VibeLegal is a demonstration application that generates contracts using AI. All generated contracts include the following disclaimer:
-
-> "LEGAL DISCLAIMER: This document is generated by AI and should be reviewed by a qualified attorney before use. This does not constitute legal advice."
-
-### Recommendations
-- Always have contracts reviewed by qualified legal professionals
-- Customize generated contracts for specific jurisdictions and requirements
-- Keep up-to-date with local laws and regulations
-- Use the application as a starting point, not a final solution
-
-## 🤝 Contributing
-
-### Development Guidelines
-1. Follow existing code style and conventions
-2. Add comments for complex logic
-3. Test changes thoroughly before submitting
-4. Update documentation for new features
-5. Follow semantic versioning for releases
-
-### Code Structure
-```
-vibelegal/
-├── backend/
-│   ├── server.js          # Main server file
-│   ├── database.sql       # Database schema
-│   ├── package.json       # Dependencies
-│   └── .env              # Environment variables
-├── frontend/
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── App.jsx       # Main app component
-│   │   └── App.css       # Styles
-│   ├── package.json      # Dependencies
-│   └── index.html        # HTML template
-└── README.md             # This file
+# Frontend  
+cd frontend
+npm run dev        # Development server
+npm run build      # Production build
+npm run preview    # Preview production build
 ```
 
-## 📞 Support
-
-### Common Issues
-
-#### "Network error" when registering
-- Ensure backend server is running on port 5000
-- Check that CORS is properly configured
-- Verify database connection
-
-#### "AI service temporarily unavailable"
-- Check OpenAI API key is valid and has credits
-- Verify API key is properly set in environment variables
-- Check OpenAI service status
-
-#### Database connection errors
-- Ensure PostgreSQL is running
-- Verify database credentials in .env file
-- Check that database schema has been applied
+## 📞 Support & Development
 
 ### Getting Help
-For technical support or questions about VibeLegal:
-1. Check this README for common solutions
-2. Review the code comments for implementation details
-3. Test with minimal examples to isolate issues
-4. Check logs for detailed error messages
+- **Documentation**: Comprehensive setup and API documentation  
+- **Code Comments**: Detailed implementation explanations  
+- **Error Handling**: Clear error messages and logging  
 
-## 📄 License
+### Contributing
+- **Code Style**: Follow existing patterns and conventions  
+- **Testing**: Manual testing checklist provided  
+- **Documentation**: Update docs for new features  
 
-This project is provided as-is for demonstration purposes. Please ensure compliance with all applicable laws and regulations when using or modifying this code.
+## 🔒 Security & Legal
 
-## 🔮 Future Enhancements
+### Security Features
+- JWT authentication with secure token handling  
+- Stripe webhook signature verification  
+- Input validation and sanitization  
+- Rate limiting and abuse prevention  
 
-### Potential Features
-- **Advanced Contract Types**: More specialized legal documents
-- **Template Management**: Custom contract templates
-- **Collaboration Tools**: Multi-user editing and review
-- **Version Control**: Track contract changes and revisions
-- **Integration APIs**: Connect with legal practice management systems
-- **Advanced AI**: Fine-tuned models for specific legal domains
-- **Mobile App**: Native mobile applications
-- **Analytics**: Usage analytics and reporting
-- **Compliance Tools**: Jurisdiction-specific compliance checking
-
-### Technical Improvements
-- **Microservices**: Split into smaller, focused services
-- **Caching**: Redis for improved performance
-- **Search**: Full-text search for contracts
-- **File Storage**: Cloud storage for contract documents
-- **Real-time Features**: WebSocket for live collaboration
-- **API Gateway**: Centralized API management
-- **Container Deployment**: Docker and Kubernetes support
+### Legal Disclaimers
+All generated contracts include appropriate legal disclaimers and should be reviewed by qualified attorneys before use.
 
 ---
 
-**VibeLegal** - Transforming legal contract drafting with AI technology.
-
+**VibeLegal** - AI-powered legal contract generation for the modern legal practice.

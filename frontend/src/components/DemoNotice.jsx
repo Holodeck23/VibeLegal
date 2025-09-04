@@ -23,15 +23,15 @@ const DemoNotice = () => {
             <div className="text-sm space-y-1">
               <p className="flex items-center gap-1">
                 <Users className="h-3 w-3" />
-                <span>Demo Account: demo@vibelegal.com</span>
+                <span>Test Account: test2@vibelegal.com</span>
               </p>
               <p className="flex items-center gap-1">
                 <Key className="h-3 w-3" />
-                <span>Password: DemoPassword123!</span>
+                <span>Password: Password1</span>
               </p>
             </div>
             <p className="text-xs mt-2">
-              This is a demonstration of VibeLegal's AI-powered contract drafting capabilities.
+              VibeLegal is in beta. Your feedback helps us improve California employment contract generation.
             </p>
           </div>
         </AlertDescription>

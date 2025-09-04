@@ -3,6 +3,40 @@
 const dotenv = require('dotenv');
 dotenv.config();
 
+// Environment variable validation - fail fast if critical vars are missing
+const requiredEnvVars = [
+  'DATABASE_URL',
+  'OPENAI_API_KEY', 
+  'JWT_SECRET'
+];
+
+const optionalEnvVars = {
+  'STRIPE_SECRET_KEY': 'Payment processing will be disabled',
+  'STRIPE_WEBHOOK_SECRET': 'Webhook signature verification will be disabled'
+};
+
+console.log('🔍 Validating environment variables...');
+
+// Check required variables
+const missingRequired = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (missingRequired.length > 0) {
+  console.error('❌ Missing required environment variables:');
+  missingRequired.forEach(envVar => {
+    console.error(`   - ${envVar}`);
+  });
+  console.error('\nPlease add these to your .env file and restart the server.');
+  process.exit(1);
+}
+
+// Check optional variables and warn
+Object.entries(optionalEnvVars).forEach(([envVar, warning]) => {
+  if (!process.env[envVar]) {
+    console.warn(`⚠️  Optional variable ${envVar} not set - ${warning}`);
+  }
+});
+
+console.log('✅ Environment validation passed');
+
 const express = require('express');
 const cors = require('cors');
 const prom = require('prom-client');

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X, Copy, RotateCcw, Square } from 'lucide-react';
+import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X, Copy, RotateCcw, Square, Plus } from 'lucide-react';
 
 export function ChatInterface({ onContractGenerate, isLoading }) {
   const { handleAuthError } = useContext(AuthContext);
@@ -33,6 +33,8 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
   const [progressIndicator, setProgressIndicator] = useState('0% complete');
   const [canForceGenerate, setCanForceGenerate] = useState(false);
   const [abortController, setAbortController] = useState(null);
+  const [currentSessionId, setCurrentSessionId] = useState(null);
+  const [hasLoadedSession, setHasLoadedSession] = useState(false);
   const scrollRef = useRef(null);
 
   // Intelligent AI conversation system
@@ -93,6 +95,134 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Load recent chat session on component mount
+  useEffect(() => {
+    const loadRecentSession = async () => {
+      if (hasLoadedSession) return;
+      
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/ai/chat/recent', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.sessions && data.sessions.length > 0) {
+            const recentSession = data.sessions[0];
+            const sessionId = recentSession.id;
+            
+            // Load the session details
+            const sessionResponse = await fetch(`/api/ai/chat/${sessionId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              if (sessionData.session && sessionData.session.conversation_state) {
+                const conversationState = sessionData.session.conversation_state;
+                
+                // Restore conversation state
+                setCurrentSessionId(sessionId);
+                if (conversationState.messages) {
+                  setMessages(conversationState.messages);
+                }
+                if (conversationState.sessionData) {
+                  setSessionData(conversationState.sessionData);
+                }
+                if (conversationState.progressIndicator) {
+                  setProgressIndicator(conversationState.progressIndicator);
+                }
+                if (conversationState.canForceGenerate !== undefined) {
+                  setCanForceGenerate(conversationState.canForceGenerate);
+                }
+                
+                console.log('Loaded existing chat session:', sessionId);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load recent chat session:', error);
+        // Continue with fresh session if loading fails
+      } finally {
+        setHasLoadedSession(true);
+      }
+    };
+    
+    loadRecentSession();
+  }, [hasLoadedSession]);
+
+  // Save conversation state to backend
+  const saveConversationState = async () => {
+    if (!currentSessionId) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const conversationState = {
+        messages,
+        sessionData,
+        progressIndicator,
+        canForceGenerate
+      };
+      
+      await fetch('/api/ai/chat/message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          message: '', // Empty message for state update only
+          conversationState
+        })
+      });
+    } catch (error) {
+      console.error('Failed to save conversation state:', error);
+    }
+  };
+
+  // Auto-save conversation state when it changes
+  useEffect(() => {
+    if (hasLoadedSession && currentSessionId && messages.length > 1) {
+      const timeoutId = setTimeout(() => {
+        saveConversationState();
+      }, 1000); // Debounce saves by 1 second
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, sessionData, progressIndicator, canForceGenerate, hasLoadedSession, currentSessionId]);
+
+  // Start a new chat conversation
+  const handleNewChat = () => {
+    setMessages([
+      {
+        id: 1,
+        type: 'bot',
+        content: "Hi! I'm your AI legal assistant. I'll help you create a professional employment contract through a simple conversation. Let's start with the basics - what type of employment agreement are you looking to create today?",
+        timestamp: new Date()
+      }
+    ]);
+    setSessionData({
+      contractType: '',
+      clientName: '',
+      otherPartyName: '',
+      jurisdiction: 'California',
+      requirements: '',
+      step: 'contract_type',
+      extractedParams: {}
+    });
+    setCurrentSessionId(null);
+    setProgressIndicator('0% complete');
+    setCanForceGenerate(false);
+    console.log('Started new chat conversation');
+  };
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -656,6 +786,30 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
     addMessage('user', userMessage);
     setInput('');
 
+    // Create a new session if we don't have one
+    if (!currentSessionId && hasLoadedSession) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/ai/chat/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            contractType: 'employment_agreement'
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setCurrentSessionId(data.sessionId);
+        }
+      } catch (error) {
+        console.error('Failed to create new chat session:', error);
+      }
+    }
+
     await processUserInput(userMessage);
   };
 
@@ -781,13 +935,23 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
             AI Contract Assistant
             <Badge variant="secondary">Pro Feature</Badge>
           </div>
-          <Dialog open={showHelp} onOpenChange={setShowHelp}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">
-                <HelpCircle className="w-4 h-4 mr-1" />
-                How it works
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleNewChat}
+              className="text-green-600 border-green-200 hover:bg-green-50"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              New Chat
+            </Button>
+            <Dialog open={showHelp} onOpenChange={setShowHelp}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">
+                  <HelpCircle className="w-4 h-4 mr-1" />
+                  How it works
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
@@ -812,6 +976,7 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </CardTitle>
         <CardDescription className="flex items-center justify-between">
           <span>Let's create your employment contract through conversation</span>

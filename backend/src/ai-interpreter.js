@@ -498,4 +498,32 @@ ${JSON.stringify(aiAnalysis, null, 2)}
   }
 });
 
+// Get user's recent chat sessions
+router.get('/chat/recent', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const result = await pool.query(
+      `SELECT id, contract_type, conversation_state, created_at, updated_at 
+       FROM chat_sessions 
+       WHERE user_id = $1 
+       ORDER BY updated_at DESC 
+       LIMIT 5`,
+      [userId]
+    );
+    
+    res.json({
+      success: true,
+      sessions: result.rows
+    });
+    
+  } catch (error) {
+    console.error('Recent chat sessions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch recent chat sessions'
+    });
+  }
+});
+
 module.exports = router;

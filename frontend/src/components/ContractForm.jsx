@@ -11,6 +11,7 @@ import { FileText, Loader2 } from 'lucide-react';
 import config from '../config.js';
 import { EnhancedContractBuilder } from './EnhancedContractBuilder';
 import { ConversationalContractBuilder } from './ConversationalContractBuilder';
+import { ProLimitModal } from './ProLimitModal';
 
 const ContractForm = () => {
   const [formData, setFormData] = useState({
@@ -22,6 +23,7 @@ const ContractForm = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showProModal, setShowProModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -234,18 +236,29 @@ const ContractForm = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
           <FileText className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-900">Create New Contract</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Create California Employment Contract</h1>
           <p className="text-lg text-gray-600 mt-2">
-            Describe your contract needs in natural language and let our AI generate a professional legal document
+            Choose your preferred creation method - quick templates, enhanced forms, or conversational AI
           </p>
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
-            <h3 className="font-semibold text-blue-900 mb-2">How it works:</h3>
-            <div className="text-sm text-blue-800 text-left space-y-1">
-              <p>1. Select your contract type and jurisdiction</p>
-              <p>2. Describe your specific needs in plain English</p>
-              <p>3. Our AI will generate a customized contract based on your requirements</p>
-              <p>4. Review, edit, and download your contract</p>
-            </div>
+        </div>
+
+        {/* Template Selection Cards */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Start Templates</h2>
+          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {contractTemplates.map((template, index) => (
+              <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => applyTemplate(template)}>
+                <CardContent className="p-4">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="bg-blue-100 p-2 rounded-lg mb-3">
+                      <FileText className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <h3 className="font-medium text-sm text-gray-900 mb-1">{template.name}</h3>
+                    <p className="text-xs text-gray-600 leading-tight">{template.description}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
 
@@ -459,6 +472,14 @@ const ContractForm = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Pro Limit Modal */}
+        <ProLimitModal 
+          isOpen={showProModal}
+          onClose={() => setShowProModal(false)}
+          contractsUsed={3}
+          monthlyLimit={3}
+        />
       </div>
     </div>
   );
