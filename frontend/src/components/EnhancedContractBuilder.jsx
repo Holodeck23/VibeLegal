@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AdvancedContractCustomizer } from './AdvancedContractCustomizer';
 import { ClauseSelector } from './ClauseSelector';
+import { CommonTooltips, SecurityIndicator, HelpTooltip } from './HelpTooltip';
 import { ChevronDown, ChevronUp, Settings, FileText } from 'lucide-react';
 
 export function EnhancedContractBuilder({ onGenerate, isLoading }) {
@@ -95,15 +96,27 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
             <span>Professional Contract Generation</span>
             <Badge variant="secondary">Pro Plan</Badge>
           </CardTitle>
-          <CardDescription>
-            AI-powered contract generation with professional legal positioning
+          <CardDescription className="space-y-3">
+            <div>
+              AI-powered contract generation with professional legal positioning
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {CommonTooltips.ProFeature}
+              {CommonTooltips.CaliforniaSpecific}
+              <SecurityIndicator level="high" />
+            </div>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Pro Plan Controls */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div>
-              <Label className="text-sm font-medium text-blue-900">Risk Tolerance</Label>
+              <HelpTooltip 
+                content="Controls how protective the contract language is. Conservative = minimal risk, standard terms. Moderate = balanced protection. Aggressive = maximum employer protection and strict terms."
+                type="info"
+              >
+                <Label className="text-sm font-medium text-blue-900 cursor-help">Risk Tolerance</Label>
+              </HelpTooltip>
               <Select 
                 value={preferences.risk_tolerance}
                 onValueChange={(value) => setPreferences(prev => ({...prev, risk_tolerance: value}))}
@@ -119,7 +132,12 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
               </Select>
             </div>
             <div>
-              <Label className="text-sm font-medium text-blue-900">Legal Stance</Label>
+              <HelpTooltip 
+                content="Determines who the contract language favors. Pro-Employee = worker-friendly terms. Neutral = fair to both parties. Pro-Employer = company-protective language and stronger employer rights."
+                type="info"
+              >
+                <Label className="text-sm font-medium text-blue-900 cursor-help">Legal Stance</Label>
+              </HelpTooltip>
               <Select 
                 value={preferences.legal_stance}
                 onValueChange={(value) => setPreferences(prev => ({...prev, legal_stance: value}))}

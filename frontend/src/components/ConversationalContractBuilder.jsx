@@ -7,12 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { CommonTooltips, SecurityIndicator, HelpTooltip } from './HelpTooltip';
+import { VersionHistoryEmptyState } from './EmptyState';
 import { 
   MessageCircle, 
   History, 
   FileText, 
   Crown,
-  Sparkles
+  Sparkles,
+  Shield,
+  Info
 } from 'lucide-react';
 
 export function ConversationalContractBuilder({ onContractGenerate, isLoading }) {
@@ -105,8 +109,16 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
             Conversational AI Contract Builder
             <Badge className="bg-blue-100 text-blue-800">Pro Active</Badge>
           </CardTitle>
-          <CardDescription>
-            Professional contract generation through AI conversation, with preview and version control
+          <CardDescription className="space-y-3">
+            <div>
+              Professional contract generation through AI conversation, with preview and version control
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {CommonTooltips.SecureData}
+              {CommonTooltips.CaliforniaSpecific}
+              {CommonTooltips.AIGenerated}
+              <SecurityIndicator level="high" />
+            </div>
           </CardDescription>
         </CardHeader>
 
@@ -143,14 +155,9 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
                   onRestore={handleVersionRestore}
                 />
               ) : (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center h-32 text-center text-gray-500">
-                      <History className="w-12 h-12 mb-3" />
-                      <p className="text-sm">Generate a contract first to view version history</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <VersionHistoryEmptyState 
+                  onCreateContract={() => setActiveTab('chat')}
+                />
               )}
             </TabsContent>
 

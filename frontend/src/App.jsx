@@ -18,8 +18,10 @@ import Privacy from './components/Privacy';
 import Terms from './components/Terms';
 import Disclaimers from './components/Disclaimers';
 import Beta from './components/Beta';
+import FAQ from './components/FAQ';
 import { FeedbackButton } from './components/FeedbackButton';
 import Footer from './components/Footer';
+import { ToastProvider } from './components/Toast';
 
 // Context for authentication
 export const AuthContext = React.createContext();
@@ -94,8 +96,9 @@ function App() {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, handleAuthError }}>
-      <Router>
+    <ToastProvider>
+      <AuthContext.Provider value={{ user, login, logout, handleAuthError }}>
+        <Router>
         <div className="min-h-screen bg-gray-50">
           <Navbar />
           <Routes>
@@ -109,6 +112,7 @@ function App() {
             <Route path="/terms" element={<Terms />} />
             <Route path="/disclaimers" element={<Disclaimers />} />
             <Route path="/beta" element={<Beta />} />
+            <Route path="/faq" element={<FAQ />} />
             <Route 
               path="/dashboard" 
               element={user ? <Dashboard /> : <Navigate to="/login" />} 
@@ -131,6 +135,7 @@ function App() {
         </div>
       </Router>
     </AuthContext.Provider>
+    </ToastProvider>
   );
 }
 
