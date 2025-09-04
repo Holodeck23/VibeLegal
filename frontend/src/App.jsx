@@ -12,6 +12,12 @@ import ContractResult from './components/ContractResult';
 import ContractViewer from './components/ContractViewer';
 import Dashboard from './components/Dashboard';
 import Pricing from './components/Pricing';
+import About from './components/About';
+import Contact from './components/Contact';
+import Privacy from './components/Privacy';
+import Terms from './components/Terms';
+import Disclaimers from './components/Disclaimers';
+import Beta from './components/Beta';
 import { FeedbackButton } from './components/FeedbackButton';
 import Footer from './components/Footer';
 
@@ -97,6 +103,12 @@ function App() {
             <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
             <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/disclaimers" element={<Disclaimers />} />
+            <Route path="/beta" element={<Beta />} />
             <Route 
               path="/dashboard" 
               element={user ? <Dashboard /> : <Navigate to="/login" />} 

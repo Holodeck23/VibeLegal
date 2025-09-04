@@ -23,22 +23,24 @@ const Pricing = () => {
       name: 'Basic',
       price: 0,
       period: 'Free',
-      description: 'Get started with California employment contracts',
+      description: 'Get started with employment contract basics',
       features: [
-        'Unlimited basic contracts (California only)',
+        'Unlimited basic contracts',
         'Up to 3 Pro contracts/month', 
         'Save & download (HTML export)',
-        'Email support',
+        'Community support',
         'Always free'
       ],
       popular: false,
-      current: user?.subscription_tier === 'basic'
+      current: user?.subscription_tier === 'basic',
+      note: 'Available after beta program'
     },
     {
       name: 'Founding Member Pro',
       price: 150,
+      originalPrice: 300,
       period: 'month',
-      description: 'Beta Only - Limited to 5 seats',
+      description: 'Exclusive beta program - Limited seats',
       features: [
         'Everything in Basic',
         'Unlimited Pro contracts',
@@ -47,12 +49,11 @@ const Pricing = () => {
         'AI Chat (coming soon)',
         'Direct feedback channel to dev team',
         'Locked pricing for 12 months',
-        'Limited to 5 seats'
+        'Limited seats available'
       ],
       popular: true,
-      badge: 'Beta Only',
-      betaLabel: 'Limited Beta Pricing',
-      seatCounter: 'Limited to 5 seats',
+      badge: 'Beta Only - 50% Off',
+      seatCounter: 'Limited seats available',
       current: user?.subscription_tier === 'pro'
     },
     {
@@ -64,6 +65,7 @@ const Pricing = () => {
         'Team seats & collaboration',
         'Admin dashboards',
         'Custom compliance workflows',
+        'Local AI model option (data never leaves office)',
         'API & integrations',
         'Dedicated support'
       ],
@@ -116,7 +118,7 @@ const Pricing = () => {
             Simple, Transparent Pricing
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Start free, join our beta program, or wait for full launch. Purpose-built for California employment law.
+            Join our exclusive beta program for early access. Purpose-built for California employment law.
           </p>
         </div>
 
@@ -157,11 +159,24 @@ const Pricing = () => {
                     <>
                       <span className="text-5xl font-bold text-gray-900">Free</span>
                       <span className="text-xl text-gray-600"></span>
+                      {plan.note && (
+                        <div className="mt-2">
+                          <Badge variant="outline" className="text-xs text-gray-600">
+                            {plan.note}
+                          </Badge>
+                        </div>
+                      )}
                     </>
                   ) : plan.price === null ? (
                     <span className="text-2xl font-bold text-gray-500">{plan.period}</span>
                   ) : (
                     <>
+                      {plan.originalPrice && (
+                        <div className="mb-2">
+                          <span className="text-2xl text-gray-400 line-through">${plan.originalPrice}</span>
+                          <span className="text-sm text-gray-500 ml-1">/{plan.period}</span>
+                        </div>
+                      )}
                       <span className={`text-5xl font-bold ${plan.isComingSoon ? 'text-gray-500' : 'text-gray-900'}`}>${plan.price}</span>
                       <span className={`text-xl ${plan.isComingSoon ? 'text-gray-500' : 'text-gray-600'}`}>/{plan.period}</span>
                     </>
@@ -196,6 +211,10 @@ const Pricing = () => {
                 ) : plan.current ? (
                   <Button disabled className="w-full" variant="outline">
                     Current Plan
+                  </Button>
+                ) : plan.name === 'Basic' ? (
+                  <Button className="w-full" variant="outline" disabled>
+                    Join Waitlist
                   </Button>
                 ) : user ? (
                   <Button className="w-full">
@@ -327,10 +346,10 @@ const Pricing = () => {
         {/* CTA Section */}
         <div className="text-center bg-blue-600 rounded-2xl p-12">
           <h2 className="text-3xl font-bold text-white mb-4">
-            Ready to Transform Your Contract Drafting?
+            Ready to Join Our Exclusive Beta?
           </h2>
           <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join hundreds of legal professionals who are saving time and improving efficiency with VibeLegal
+            Be among the first legal professionals to shape the future of California employment contract generation
           </p>
           {user ? (
             <Button size="lg" variant="secondary" className="text-lg px-8 py-3">
@@ -339,7 +358,7 @@ const Pricing = () => {
           ) : (
             <Link to="/register">
               <Button size="lg" variant="secondary" className="text-lg px-8 py-3">
-                Start Your Free Trial
+                Join Beta Program
               </Button>
             </Link>
           )}

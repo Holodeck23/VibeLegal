@@ -92,6 +92,9 @@ const ContractForm = () => {
       ...prev,
       requirements: template.requirements
     }));
+    // Switch to Basic mode so user can see the populated requirements
+    setIsEnhancedMode(false);
+    setUseConversationalAI(false);
   };
 
   const handleSubmit = async (e) => {
@@ -245,9 +248,10 @@ const ContractForm = () => {
         {/* Template Selection Cards */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Start Templates</h2>
+          <p className="text-sm text-gray-600 mb-4">Click a template to populate the contract requirements and switch to Basic mode for editing</p>
           <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
             {contractTemplates.map((template, index) => (
-              <Card key={index} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => applyTemplate(template)}>
+              <Card key={index} className="cursor-pointer hover:shadow-md hover:bg-blue-50 transition-all duration-200 border-2 hover:border-blue-300" onClick={() => applyTemplate(template)}>
                 <CardContent className="p-4">
                   <div className="flex flex-col items-center text-center">
                     <div className="bg-blue-100 p-2 rounded-lg mb-3">
