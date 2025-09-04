@@ -407,25 +407,6 @@ const ContractForm = () => {
 
                 <div>
                   <Label htmlFor="requirements">Contract Requirements *</Label>
-                  
-                  {/* Template Selection */}
-                  <div className="mt-2 mb-4">
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Quick Start Templates</Label>
-                    <div className="grid md:grid-cols-2 gap-2">
-                      {contractTemplates.map((template, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => applyTemplate(template)}
-                          className="p-3 text-left border rounded-lg hover:bg-gray-50 hover:border-blue-300 transition-colors"
-                        >
-                          <div className="font-medium text-sm text-gray-900">{template.name}</div>
-                          <div className="text-xs text-gray-600 mt-1">{template.description}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   <Textarea
                     id="requirements"
                     value={formData.requirements}

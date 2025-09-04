@@ -349,6 +349,22 @@ app.get('/api/features', authenticateToken, (req, res) => {
   });
 });
 
+// Clause library endpoint for Enhanced mode
+app.get('/api/clause-library', authenticateToken, async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    
+    const clauseLibraryPath = path.join(__dirname, 'clause_library_enhanced.json');
+    const clauseLibrary = JSON.parse(fs.readFileSync(clauseLibraryPath, 'utf8'));
+    
+    res.json(clauseLibrary);
+  } catch (error) {
+    console.error('Error loading clause library:', error);
+    res.status(500).json({ error: 'Failed to load clause library' });
+  }
+});
+
 // Delete contract
 app.delete('/api/contracts/:id', authenticateToken, async (req, res) => {
   try {

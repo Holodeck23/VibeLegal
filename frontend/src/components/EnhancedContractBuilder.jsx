@@ -6,6 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { AdvancedContractCustomizer } from './AdvancedContractCustomizer';
+import { ClauseSelector } from './ClauseSelector';
+import { CommonTooltips, SecurityIndicator, HelpTooltip } from './HelpTooltip';
+import { ChevronDown, ChevronUp, Settings, FileText } from 'lucide-react';
 
 export function EnhancedContractBuilder({ onGenerate, isLoading }) {
   const [preferences, setPreferences] = useState({
@@ -21,6 +26,11 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
     jurisdiction: 'California'
   });
 
+  const [showAdvancedCustomizer, setShowAdvancedCustomizer] = useState(false);
+  const [showClauseSelector, setShowClauseSelector] = useState(false);
+  const [advancedPreferences, setAdvancedPreferences] = useState(null);
+  const [selectedClauses, setSelectedClauses] = useState({});
+
   // MVP: Limited to California Employment Contracts only
   const contractTypes = [
     { value: 'Employment Agreement', label: 'Employment Agreement' }
@@ -33,6 +43,14 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
     if (!contractData.contractType || !contractData.requirements || !contractData.clientName || 
         !contractData.otherPartyName || !contractData.jurisdiction) {
       return;
+    }
+
+    // Merge basic and advanced preferences, and include specific clause selections
+    const finalPreferences = advancedPreferences ? advancedPreferences : preferences;
+    
+    // Include specific clause variations if selected
+    if (Object.keys(selectedClauses).length > 0) {
+      finalPreferences.clause_variations = selectedClauses;
     }
 
     onGenerate({
@@ -66,7 +84,7 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
         jurisdiction: contractData.jurisdiction,
         requirements: contractData.requirements
       },
-      preferences: preferences
+      preferences: finalPreferences
     });
   };
 
@@ -78,15 +96,27 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
             <span>Professional Contract Generation</span>
             <Badge variant="secondary">Pro Plan</Badge>
           </CardTitle>
-          <CardDescription>
-            AI-powered contract generation with professional legal positioning
+          <CardDescription className="space-y-3">
+            <div>
+              AI-powered contract generation with professional legal positioning
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {CommonTooltips.ProFeature}
+              {CommonTooltips.CaliforniaSpecific}
+              <SecurityIndicator level="high" />
+            </div>
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Pro Plan Controls */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <div>
-              <Label className="text-sm font-medium text-blue-900">Risk Tolerance</Label>
+              <HelpTooltip 
+                content="Controls how protective the contract language is. Conservative = minimal risk, standard terms. Moderate = balanced protection. Aggressive = maximum employer protection and strict terms."
+                type="info"
+              >
+                <Label className="text-sm font-medium text-blue-900 cursor-help">Risk Tolerance</Label>
+              </HelpTooltip>
               <Select 
                 value={preferences.risk_tolerance}
                 onValueChange={(value) => setPreferences(prev => ({...prev, risk_tolerance: value}))}
@@ -102,7 +132,12 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
               </Select>
             </div>
             <div>
-              <Label className="text-sm font-medium text-blue-900">Legal Stance</Label>
+              <HelpTooltip 
+                content="Determines who the contract language favors. Pro-Employee = worker-friendly terms. Neutral = fair to both parties. Pro-Employer = company-protective language and stronger employer rights."
+                type="info"
+              >
+                <Label className="text-sm font-medium text-blue-900 cursor-help">Legal Stance</Label>
+              </HelpTooltip>
               <Select 
                 value={preferences.legal_stance}
                 onValueChange={(value) => setPreferences(prev => ({...prev, legal_stance: value}))}
@@ -210,6 +245,41 @@ export function EnhancedContractBuilder({ onGenerate, isLoading }) {
               </div>
             </div>
           </div>
+
+          {/* Specific Clause Selection */}
+          <Collapsible open={showClauseSelector} onOpenChange={setShowClauseSelector}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Specific Clause Selection ({Object.keys(selectedClauses).length} selected)
+                {showClauseSelector ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <ClauseSelector onClauseSelectionChange={setSelectedClauses} />
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Advanced Customization Section */}
+          <Collapsible open={showAdvancedCustomizer} onOpenChange={setShowAdvancedCustomizer}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                Advanced Contract Customization (Slider Controls)
+                {showAdvancedCustomizer ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <AdvancedContractCustomizer
+                  contractData={contractData}
+                  onUpdate={setAdvancedPreferences}
+                  onPreview={() => {}} // Preview handled separately
+                  isGenerating={isLoading}
+                />
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <Button 
             onClick={handleGenerate}

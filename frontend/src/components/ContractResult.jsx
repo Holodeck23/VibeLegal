@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ContractEditor } from './ContractEditor';
 import { 
   FileText, 
   Download, 
@@ -17,13 +18,16 @@ import {
   ArrowLeft,
   RefreshCw,
   Wand2,
-  MessageCircle
+  MessageCircle,
+  Settings
 } from 'lucide-react';
 import config from '../config.js';
+import { useContractToasts } from './Toast';
 
 const ContractResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const contractToasts = useContractToasts();
   const [contractContent, setContractContent] = useState('');
   const [contractTitle, setContractTitle] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -180,9 +184,11 @@ Please provide an improved version of this section only, maintaining legal accur
 
       if (response.ok) {
         setSaved(true);
+        contractToasts.contractSaved();
         setTimeout(() => setSaved(false), 3000);
       } else {
         setError(data.error || 'Failed to save contract');
+        contractToasts.saveError();
       }
     } catch (err) {
       setError('Network error. Please try again.');
@@ -223,6 +229,7 @@ Please provide an improved version of this section only, maintaining legal accur
     
     // Show download success feedback
     setDownloaded(true);
+    contractToasts.contractDownloaded('HTML document');
     setTimeout(() => setDownloaded(false), 3000);
   };
 
@@ -281,9 +288,13 @@ Please provide an improved version of this section only, maintaining legal accur
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="full" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="full">Full Contract</TabsTrigger>
                     <TabsTrigger value="sections">Edit by Section</TabsTrigger>
+                    <TabsTrigger value="editor">
+                      <Settings className="w-4 h-4 mr-1" />
+                      Professional Editor
+                    </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="full" className="mt-4">
@@ -364,6 +375,19 @@ Please provide an improved version of this section only, maintaining legal accur
                         </Card>
                       ))}
                     </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="editor" className="mt-4">
+                    <ContractEditor
+                      contractContent={contractContent}
+                      contractTitle={contractTitle}
+                      onContentChange={setContractContent}
+                      onTitleChange={setContractTitle}
+                      onDownload={(format) => {
+                        setDownloaded(true);
+                        setTimeout(() => setDownloaded(false), 3000);
+                      }}
+                    />
                   </TabsContent>
                 </Tabs>
               </CardContent>

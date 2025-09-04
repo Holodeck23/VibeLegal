@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { ChatInterface } from './ChatInterface';
-import { AdvancedContractCustomizer } from './AdvancedContractCustomizer';
 import { ContractVersionHistory } from './ContractVersionHistory';
 import { SubscriptionGate, useSubscription } from './SubscriptionGate';
 import { ProUpgradeFlow } from './ProUpgradeFlow';
@@ -8,13 +7,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { CommonTooltips, SecurityIndicator, HelpTooltip } from './HelpTooltip';
+import { VersionHistoryEmptyState } from './EmptyState';
 import { 
   MessageCircle, 
-  Settings, 
   History, 
   FileText, 
   Crown,
-  Sparkles
+  Sparkles,
+  Shield,
+  Info
 } from 'lucide-react';
 
 export function ConversationalContractBuilder({ onContractGenerate, isLoading }) {
@@ -36,66 +38,12 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
       }
     }
     
-    // Switch to customization tab after generation
-    setActiveTab('customize');
+    // Switch to preview tab after generation to show contract details
+    setActiveTab('preview');
   };
 
-  const handleCustomizationUpdate = (preferences) => {
-    if (contractData) {
-      setContractData(prev => ({
-        ...prev,
-        preferences: {
-          ...prev.preferences,
-          ...preferences
-        }
-      }));
-    }
-  };
-
-  const handleCustomizationPreview = async (preferences) => {
-    try {
-      // Use the contract generation API to create a preview
-      const token = localStorage.getItem('token');
-      
-      if (!contractData || !contractData.parameters) {
-        return {
-          preview: "No contract data available for preview. Please generate a contract first."
-        };
-      }
-
-      const previewPayload = {
-        contractType: contractData.contractType || 'employment_agreement',
-        parameters: contractData.parameters,
-        preferences: preferences,
-        preview: true // Flag to indicate this is a preview request
-      };
-
-      const response = await fetch('/api/generate-contract', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(previewPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Preview failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      return {
-        preview: result.contractContent || "Preview generation failed"
-      };
-      
-    } catch (error) {
-      console.error('Preview generation error:', error);
-      return {
-        preview: `Preview Error: ${error.message}\n\nFalling back to mock preview:\n\nRisk Tolerance: ${preferences.risk_tolerance}/100\nLegal Stance: ${preferences.legal_stance}\n\nCustomized clause strengths:\n${Object.entries(preferences.clause_strength).map(([clause, strength]) => `• ${clause}: ${strength}%`).join('\n')}`
-      };
-    }
-  };
+  // Note: Customization features moved to Enhanced section
+  // All customization in AI Chat happens through conversation
 
   const handleVersionSelect = (version) => {
     console.log('Selected version:', version);
@@ -161,21 +109,25 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
             Conversational AI Contract Builder
             <Badge className="bg-blue-100 text-blue-800">Pro Active</Badge>
           </CardTitle>
-          <CardDescription>
-            Professional contract generation with AI conversation, advanced customization, and version control
+          <CardDescription className="space-y-3">
+            <div>
+              Professional contract generation through AI conversation, with preview and version control
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              {CommonTooltips.SecureData}
+              {CommonTooltips.CaliforniaSpecific}
+              {CommonTooltips.AIGenerated}
+              <SecurityIndicator level="high" />
+            </div>
           </CardDescription>
         </CardHeader>
 
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="chat" className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4" />
                 AI Chat
-              </TabsTrigger>
-              <TabsTrigger value="customize" className="flex items-center gap-2">
-                <Settings className="w-4 h-4" />
-                Customize
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center gap-2">
                 <History className="w-4 h-4" />
@@ -194,14 +146,6 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
               />
             </TabsContent>
 
-            <TabsContent value="customize" className="mt-6">
-              <AdvancedContractCustomizer
-                contractData={contractData}
-                onUpdate={handleCustomizationUpdate}
-                onPreview={handleCustomizationPreview}
-                isGenerating={isLoading}
-              />
-            </TabsContent>
 
             <TabsContent value="history" className="mt-6">
               {contractId ? (
@@ -211,14 +155,9 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
                   onRestore={handleVersionRestore}
                 />
               ) : (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col items-center justify-center h-32 text-center text-gray-500">
-                      <History className="w-12 h-12 mb-3" />
-                      <p className="text-sm">Generate a contract first to view version history</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <VersionHistoryEmptyState 
+                  onCreateContract={() => setActiveTab('chat')}
+                />
               )}
             </TabsContent>
 
@@ -267,8 +206,8 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
                         <Button onClick={() => setActiveTab('chat')}>
                           Edit Requirements
                         </Button>
-                        <Button onClick={() => setActiveTab('customize')} variant="outline">
-                          Customize Further
+                        <Button onClick={() => setActiveTab('history')} variant="outline">
+                          View Versions
                         </Button>
                         <Button 
                           onClick={() => onContractGenerate && onContractGenerate(contractData)}

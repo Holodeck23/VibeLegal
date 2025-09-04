@@ -80,19 +80,20 @@ const Beta = () => {
         </div>
 
         {/* What is Beta Program */}
-        <Card className="mb-12">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-6 w-6 text-purple-600" />
-              What is the VibeLegal Beta Program?
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700 text-lg leading-relaxed mb-6">
-              Our beta program gives legal professionals and business owners early access to VibeLegal's AI-powered 
-              contract generation platform. You'll work directly with our development team to refine the system 
-              and ensure it meets the highest professional standards for California employment law.
-            </p>
+        <div className="max-w-4xl mx-auto">
+          <Card className="mb-12">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-6 w-6 text-purple-600" />
+                What is the VibeLegal Beta Program?
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-700 text-lg leading-relaxed mb-6">
+                Our beta program gives legal professionals and business owners early access to VibeLegal's AI-powered 
+                contract generation platform. You'll work directly with our development team to refine the system 
+                and ensure it meets the highest professional standards for California employment law.
+              </p>
             <div className="grid md:grid-cols-2 gap-6">
               <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                 <h3 className="font-semibold text-green-800 mb-2">What You Get:</h3>
@@ -117,6 +118,7 @@ const Beta = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
 
         {/* Beta Features */}
         <div className="mb-12">
