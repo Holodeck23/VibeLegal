@@ -43,7 +43,12 @@ const ContractResult = () => {
 
     const { contract, contractType, clientName, otherPartyName, metadata, version, conversationalData, canReturnToChat } = location.state;
     setContractContent(contract);
-    setContractTitle(`${contractType} - ${clientName} & ${otherPartyName}`);
+    
+    // Generate title with fallbacks for undefined values
+    const safeClientName = clientName || 'Company';
+    const safeOtherPartyName = otherPartyName || 'Employee';
+    const baseTitle = contractType || 'Employment Agreement';
+    setContractTitle(`${baseTitle} - ${safeClientName} & ${safeOtherPartyName}`);
     setMetadata({
       ...metadata,
       version: version || 'basic',

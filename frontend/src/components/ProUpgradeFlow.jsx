@@ -105,10 +105,7 @@ export function ProUpgradeFlow({ isOpen, onClose, onSuccess }) {
     setIsProcessing(true);
     
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // TODO: Integrate with Stripe for actual payment processing
+      // Create Stripe checkout session
       const response = await fetch('/api/user/checkout', {
         method: 'POST',
         headers: {
@@ -117,24 +114,21 @@ export function ProUpgradeFlow({ isOpen, onClose, onSuccess }) {
         },
         body: JSON.stringify({
           tier: 'pro',
-          billingCycle: plans[selectedPlan].billing,
-          billingInfo,
-          paymentInfo
+          billingCycle: plans[selectedPlan].billing === 'year' ? 'yearly' : 'monthly'
         })
       });
 
-      if (response.ok) {
-        setStep('success');
-        setTimeout(() => {
-          onSuccess?.();
-          onClose();
-        }, 2000);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.checkoutSession.url;
       } else {
-        throw new Error('Payment processing failed');
+        throw new Error(data.error || 'Payment processing failed');
       }
     } catch (error) {
       console.error('Payment error:', error);
-      alert('Payment processing failed. Please try again.');
+      alert(`Payment processing failed: ${error.message}. Please try again.`);
     } finally {
       setIsProcessing(false);
     }
@@ -227,7 +221,7 @@ export function ProUpgradeFlow({ isOpen, onClose, onSuccess }) {
               </div>
               <Button onClick={handleNextStep} className="px-8">
                 Continue with {selectedPlanDetails.name}
-                <span className="ml-2">${selectedPlanDetails.price}/{selectedPlanDetails.billing}</span>
+                <span className="ml-2">${selectedPlanDetails.price}/{selectedPlanDetails.billing === 'year' ? 'year' : 'month'}</span>
               </Button>
             </div>
           </TabsContent>

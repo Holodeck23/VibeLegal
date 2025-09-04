@@ -22,6 +22,7 @@ const Navbar = () => {
             <Link to="/" className="flex items-center space-x-2">
               <Scale className="h-8 w-8 text-blue-600" />
               <span className="text-xl font-bold text-gray-900">VibeLegal</span>
+              <span className="px-2 py-1 text-xs font-medium text-blue-600 bg-blue-100 rounded-full">β</span>
             </Link>
           </div>
 

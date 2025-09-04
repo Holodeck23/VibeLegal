@@ -1,8 +1,16 @@
 const express = require('express');
-// Initialize Stripe only if API key is available
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? require('stripe')(process.env.STRIPE_SECRET_KEY)
-  : null;
+
+// Lazy initialize Stripe only when needed and API key is available
+let stripe = null;
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return null;
+  }
+  if (!stripe) {
+    stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  }
+  return stripe;
+}
 const { pool } = require('./db/pool');
 const { authenticateToken } = require('../middleware/authenticateToken');
 
@@ -101,6 +109,7 @@ router.get('/access/:feature', authenticateToken, async (req, res) => {
 // Create subscription checkout session (Stripe integration)
 router.post('/checkout', authenticateToken, async (req, res) => {
   try {
+    const stripe = getStripe();
     if (!stripe) {
       return res.status(503).json({
         success: false,
@@ -206,6 +215,7 @@ router.post('/webhook/stripe', express.raw({type: 'application/json'}), async (r
   let event;
 
   try {
+    const stripe = getStripe();
     if (!stripe) {
       return res.status(503).json({
         success: false,
@@ -522,6 +532,12 @@ async function handlePaymentSuccess(invoice) {
 
 async function handlePaymentFailure(invoice) {
   try {
+    const stripe = getStripe();
+    if (!stripe) {
+      console.error('Stripe not configured for payment failure handling');
+      return;
+    }
+    
     const subscriptionId = invoice.subscription;
     
     if (subscriptionId) {

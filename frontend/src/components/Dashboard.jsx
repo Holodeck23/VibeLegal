@@ -16,7 +16,9 @@ import {
   CheckCircle,
   Trash2,
   Search,
-  Filter
+  Filter,
+  Zap,
+  Users
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -109,10 +111,10 @@ const Dashboard = () => {
 
   const getContractTypeColor = (type) => {
     const colors = {
-      'Employment Agreement': 'bg-blue-100 text-blue-800',
-      'CA Employment Agreement': 'bg-green-100 text-green-800',
-      'Enhanced Employment Agreement': 'bg-purple-100 text-purple-800',
-      'Conversational AI Employment Agreement': 'bg-orange-100 text-orange-800'
+      'Employment Agreement': 'bg-gray-100 text-gray-800', // Basic → Grey
+      'CA Employment Agreement': 'bg-gray-100 text-gray-800', // Basic → Grey
+      'Enhanced Employment Agreement': 'bg-blue-100 text-blue-800', // Enhanced → Blue
+      'Conversational AI Employment Agreement': 'bg-purple-100 text-purple-800' // AI Chat → Purple
     };
 
     return colors[type] || 'bg-gray-100 text-gray-800';
@@ -144,7 +146,7 @@ const Dashboard = () => {
     },
     {
       title: 'Subscription',
-      value: user?.subscription_tier === 'basic' ? 'Basic' : 'Premium',
+      value: user?.subscription_tier === 'basic' ? 'Basic' : user?.subscription_tier === 'pro' ? 'Pro' : 'Basic',
       icon: <TrendingUp className="h-6 w-6 text-purple-600" />,
       description: 'Current plan'
     }
@@ -153,13 +155,47 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Beta Banner */}
+        <div className="mb-6 beta-banner">
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <span className="text-blue-600 font-bold text-sm">β</span>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-blue-900">
+                      Welcome to VibeLegal Beta!
+                    </h3>
+                    <p className="text-sm text-blue-700">
+                      You're part of our exclusive beta program. Help us improve by sharing your feedback!
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-blue-600 hover:text-blue-800"
+                  onClick={() => {
+                    // This will be implemented with proper state management later
+                    document.querySelector('.beta-banner').style.display = 'none';
+                  }}
+                >
+                  ✕
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
             Welcome back, {user?.email}
           </h1>
           <p className="text-lg text-gray-600 mt-2">
-            Manage your contracts and create new ones with AI assistance
+            Create California employment agreements through natural conversation with AI
           </p>
 
         </div>
@@ -192,33 +228,141 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>
-                Get started with creating your next contract
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/create-contract">
-                  <Button size="lg" className="w-full sm:w-auto">
-                    <Plus className="mr-2 h-5 w-5" />
-                    Create New Contract
-                  </Button>
-                </Link>
-                <Link to="/pricing">
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                    <TrendingUp className="mr-2 h-5 w-5" />
-                    Upgrade Plan
-                  </Button>
-                </Link>
-
-              </div>
-            </CardContent>
-          </Card>
-
-
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Primary Action */}
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Start New Contract</CardTitle>
+                <CardDescription>
+                  Generate California-compliant employment contracts in minutes
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <Link to="/create-contract" className="block">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-blue-100 p-2 rounded-lg">
+                            <FileText className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900">Standard Employment</h3>
+                            <p className="text-sm text-gray-600">Full-time, at-will employment</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  
+                  <Link to="/create-contract" className="block">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-purple-100 p-2 rounded-lg">
+                            <Zap className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900">AI Conversational</h3>
+                            <p className="text-sm text-gray-600">Chat-based contract creation</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  
+                  <Link to="/create-contract" className="block">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-green-100 p-2 rounded-lg">
+                            <Users className="h-5 w-5 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900">Executive Level</h3>
+                            <p className="text-sm text-gray-600">Enhanced terms & severance</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                  
+                  <Link to="/create-contract" className="block">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="bg-orange-100 p-2 rounded-lg">
+                            <Clock className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900">Part-Time / Remote</h3>
+                            <p className="text-sm text-gray-600">Flexible arrangements</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Upgrade Action - Only show for Basic users */}
+            {user?.subscription_tier === 'basic' ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Upgrade to Pro</CardTitle>
+                  <CardDescription>
+                    Join our exclusive beta program with unlimited contracts
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <h4 className="font-medium text-blue-900">Pro Benefits</h4>
+                      <ul className="text-sm text-blue-700 mt-1 space-y-1">
+                        <li>• Unlimited contracts</li>
+                        <li>• Advanced AI features</li>
+                        <li>• Premium templates</li>
+                        <li>• Priority support</li>
+                      </ul>
+                    </div>
+                    <Link to="/pricing">
+                      <Button variant="outline" size="lg" className="w-full">
+                        <TrendingUp className="mr-2 h-5 w-5" />
+                        View Pricing
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pro Member</CardTitle>
+                  <CardDescription>
+                    You're part of our exclusive beta program
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <h4 className="font-medium text-green-900">Your Pro Benefits</h4>
+                      <ul className="text-sm text-green-700 mt-1 space-y-1">
+                        <li>✓ Unlimited contracts</li>
+                        <li>✓ Advanced AI features</li>
+                        <li>✓ Premium templates</li>
+                        <li>✓ Priority support</li>
+                        <li>✓ Beta pricing locked</li>
+                      </ul>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-sm text-gray-600">Thank you for being a founding member!</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
 
         {/* Usage Limit Warning */}
@@ -233,8 +377,8 @@ const Dashboard = () => {
                       Approaching Monthly Limit
                     </h3>
                     <p className="text-yellow-700">
-                      You've used {contractStats.monthlyCount} of 25 contracts this month. 
-                      Consider upgrading to Premium for unlimited contracts.
+                      You've used {contractStats.monthlyCount} of 5 contracts this month. 
+                      Consider upgrading to Pro for unlimited contracts and advanced features.
                     </p>
 
                   </div>
@@ -333,52 +477,46 @@ const Dashboard = () => {
                   </div>
                 ) : (
                   filteredContracts.map((contract) => (
-                  <div
-                    key={contract.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="bg-blue-100 p-2 rounded-lg">
-                        <FileText className="h-5 w-5 text-blue-600" />
-
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-gray-900">
-                          {contract.title}
-                        </h3>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Badge 
-                            variant="secondary" 
-                            className={getContractTypeColor(contract.contract_type)}
-
-                          >
-                            {contract.contract_type}
-                          </Badge>
-                          <span className="text-sm text-gray-500">
-                            Created {formatDate(contract.created_at)}
-
-                          </span>
-
-                        </div>
-
-                      </div>
-
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setDeleteConfirm({ id: contract.id, title: contract.title })}
-
-                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                        title="Delete contract"
+                    <div
+                      key={contract.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <Link 
+                        to={`/contracts/${contract.id}`} 
+                        className="flex items-center space-x-4 flex-1 hover:text-blue-600 transition-colors"
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      <span className="text-sm text-gray-500">Saved</span>
-
+                        <div className="bg-blue-100 p-2 rounded-lg">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                            {contract.title}
+                          </h3>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Badge 
+                              variant="secondary" 
+                              className={getContractTypeColor(contract.contract_type)}
+                            >
+                              {contract.contract_type}
+                            </Badge>
+                            <span className="text-sm text-gray-500">
+                              Created {formatDate(contract.created_at)}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => setDeleteConfirm({ id: contract.id, title: contract.title })}
+                          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                          title="Delete contract"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <span className="text-sm text-gray-500">Saved</span>
+                      </div>
                     </div>
-
-                  </div>
                   ))
                 )}
 

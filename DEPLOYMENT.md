@@ -1,678 +1,274 @@
-# VibeLegal Deployment Guide
+# VibeLegal Deployment Checklist
 
-This guide provides step-by-step instructions for deploying VibeLegal to production environments.
+## 🚀 Pre-Deployment Preparation
 
-## 🚀 Quick Deployment Options
+### ❌ **Critical Issues to Fix**
+- [ ] **Fix frontend security vulnerabilities** (2 moderate severity in esbuild/vite)
+  ```bash
+  cd frontend && npm audit fix --force
+  ```
+- [ ] **Add environment variable validation** to backend startup
+- [ ] **Commit and merge Stripe integration** changes to main branch
+- [ ] **Apply Stripe database migration** to production schema
 
-### Option 1: Traditional VPS/Server Deployment
-Best for: Full control, custom configurations, cost-effective for high traffic
+### ⚠️ **Required Before Deploy**
+- [ ] **Environment Variables Setup**
+  - [ ] Create production `.env` file with all required keys
+  - [ ] Stripe API keys (live keys for production)
+  - [ ] OpenAI API key with sufficient credits
+  - [ ] JWT secret (generate secure random string)
+  - [ ] Database connection string
+  - [ ] Frontend URL for redirects
 
-### Option 2: Cloud Platform Deployment
-Best for: Scalability, managed services, quick setup
+- [ ] **Database Preparation**
+  - [ ] Create production PostgreSQL database
+  - [ ] Run base schema: `psql -d vibelegal -f database.sql`
+  - [ ] Run Stripe migration: `psql -d vibelegal -f stripe-migration.sql`
+  - [ ] Verify all tables created successfully
 
-### Option 3: Container Deployment
-Best for: Consistency across environments, easy scaling, DevOps workflows
+- [ ] **Stripe Account Setup**
+  - [ ] Complete Stripe account verification
+  - [ ] Create products and prices: `node setup-stripe.js`
+  - [ ] Set up webhook endpoint: `/api/user/webhook/stripe`
+  - [ ] Test payment flow in Stripe test mode
+  - [ ] Configure live payment methods
 
-## 🖥️ Traditional Server Deployment
+## 🏗️ Infrastructure Setup
 
-### Prerequisites
-- Ubuntu 20.04+ or CentOS 8+ server
-- Root or sudo access
-- Domain name (optional but recommended)
-- SSL certificate (Let's Encrypt recommended)
+### Backend Deployment
+- [ ] **Choose hosting platform** (Railway, Render, DigitalOcean, AWS)
+- [ ] **Set up production database** (managed PostgreSQL)
+- [ ] **Configure environment variables** on hosting platform
+- [ ] **Set up SSL/TLS certificates** (usually automatic on modern platforms)
+- [ ] **Configure domain** (e.g., api.vibelegal.com)
 
-### Step 1: Server Setup
+### Frontend Deployment  
+- [ ] **Build production version**
+  ```bash
+  cd frontend && npm run build
+  ```
+- [ ] **Choose static hosting** (Vercel, Netlify, Cloudflare Pages)
+- [ ] **Configure API endpoints** to point to production backend
+- [ ] **Set up custom domain** (e.g., vibelegal.com)
+- [ ] **Configure redirects** for SPA routing
 
-#### Update System
-```bash
-sudo apt update && sudo apt upgrade -y
-```
+### DNS Configuration
+- [ ] **Set up domain records**
+  - A record: vibelegal.com → static hosting IP
+  - CNAME: api.vibelegal.com → backend hosting URL
+  - CNAME: www.vibelegal.com → vibelegal.com
 
-#### Install Node.js
-```bash
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
-```
+## 🧪 Testing Checklist
 
-#### Install PostgreSQL
-```bash
-sudo apt install postgresql postgresql-contrib -y
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
+### Core Functionality
+- [ ] **User Registration & Login**
+  - [ ] Create new account
+  - [ ] Email validation (if implemented)
+  - [ ] Password requirements
+  - [ ] JWT token handling
 
-#### Install Nginx
-```bash
-sudo apt install nginx -y
-sudo systemctl start nginx
-sudo systemctl enable nginx
-```
+- [ ] **Contract Generation**
+  - [ ] Conversational AI flow
+  - [ ] California employment contract generation
+  - [ ] Parameter extraction working
+  - [ ] Contract customization controls
+  - [ ] Template variations
 
-#### Install PM2 (Process Manager)
-```bash
-sudo npm install -g pm2
-```
+- [ ] **Subscription System**
+  - [ ] Basic tier limitations (5 contracts/month)
+  - [ ] Pro upgrade flow
+  - [ ] Stripe checkout process
+  - [ ] Webhook handling
+  - [ ] Feature gating
 
-### Step 2: Database Setup
+- [ ] **Dashboard Functionality**
+  - [ ] Contract listing
+  - [ ] Search and filter
+  - [ ] Contract deletion
+  - [ ] Usage statistics
 
-#### Create Database User
-```bash
-sudo -u postgres psql
-```
+### Payment Testing
+- [ ] **Stripe Test Mode**
+  - [ ] Test card: 4242424242424242
+  - [ ] Successful payment flow
+  - [ ] Failed payment handling
+  - [ ] Webhook delivery
+  - [ ] Subscription activation
 
-```sql
-CREATE USER vibelegal WITH PASSWORD 'secure_password_here';
-CREATE DATABASE vibelegal OWNER vibelegal;
-GRANT ALL PRIVILEGES ON DATABASE vibelegal TO vibelegal;
-\q
-```
+- [ ] **Production Payment Testing** (when ready)
+  - [ ] Small amount test transaction
+  - [ ] Refund process
+  - [ ] Subscription cancellation
+  - [ ] Billing cycle handling
 
-#### Apply Database Schema
-```bash
-psql -h localhost -U vibelegal -d vibelegal -f /path/to/vibelegal/backend/database.sql
-```
+## 🚨 Security Checklist
 
-### Step 3: Application Deployment
+### Application Security
+- [ ] **Environment Variables**
+  - [ ] No secrets in source code
+  - [ ] All API keys in environment variables
+  - [ ] Secure JWT secret generation
+  
+- [ ] **Input Validation**
+  - [ ] SQL injection prevention (using parameterized queries)
+  - [ ] XSS prevention (React built-in protection)
+  - [ ] CSRF protection (SameSite cookies)
+  
+- [ ] **Authentication**
+  - [ ] JWT token validation
+  - [ ] Token expiration handling
+  - [ ] Secure password hashing (bcrypt)
 
-#### Clone Repository
-```bash
-cd /var/www
-sudo git clone <repository-url> vibelegal
-sudo chown -R $USER:$USER /var/www/vibelegal
-```
+### Infrastructure Security
+- [ ] **HTTPS Enforcement**
+  - [ ] All traffic encrypted
+  - [ ] Secure headers configured
+  - [ ] HSTS enabled
 
-#### Backend Setup
-```bash
-cd /var/www/vibelegal/backend
-npm install --production
+- [ ] **Database Security**
+  - [ ] Connection encryption
+  - [ ] Limited database user permissions
+  - [ ] Regular backups configured
 
-# Create production environment file
-sudo nano .env
-```
+### Compliance
+- [ ] **Legal Disclaimers**
+  - [ ] All contracts include proper disclaimers
+  - [ ] Terms of service and privacy policy
+  - [ ] GDPR compliance (if targeting EU users)
 
-Add the following to `.env`:
-```env
-NODE_ENV=production
-PORT=5000
-DATABASE_URL=postgresql://vibelegal:secure_password_here@localhost:5432/vibelegal
-OPENAI_API_KEY=your_openai_api_key
-JWT_SECRET=<your_jwt_secret>
-```
+## 📊 Monitoring & Analytics
 
-#### Frontend Build
-```bash
-cd /var/www/vibelegal/frontend
-npm install
-npm run build
-```
+### Application Monitoring
+- [ ] **Error Tracking**
+  - [ ] Set up error logging service (Sentry, LogRocket)
+  - [ ] Monitor API errors
+  - [ ] Track user experience issues
 
-### Step 4: Process Management
+- [ ] **Performance Monitoring**
+  - [ ] API response times
+  - [ ] Database query performance
+  - [ ] Frontend loading times
 
-#### Create PM2 Ecosystem File
-```bash
-cd /var/www/vibelegal
-nano ecosystem.config.js
-```
+### Business Metrics
+- [ ] **User Analytics**
+  - [ ] User registration tracking
+  - [ ] Contract generation metrics
+  - [ ] Subscription conversion rates
+  - [ ] Feature usage statistics
 
-```javascript
-module.exports = {
-  apps: [{
-    name: 'vibelegal-backend',
-    script: './backend/server.js',
-    cwd: '/var/www/vibelegal',
-    instances: 'max',
-    exec_mode: 'cluster',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 5000
-    },
-    error_file: '/var/log/vibelegal/backend-error.log',
-    out_file: '/var/log/vibelegal/backend-out.log',
-    log_file: '/var/log/vibelegal/backend.log',
-    time: true
-  }]
-};
-```
+- [ ] **Payment Monitoring**
+  - [ ] Stripe dashboard monitoring
+  - [ ] Failed payment alerts
+  - [ ] Revenue tracking
 
-#### Create Log Directory
-```bash
-sudo mkdir -p /var/log/vibelegal
-sudo chown $USER:$USER /var/log/vibelegal
-```
+## 🔄 Post-Deployment Tasks
 
-#### Start Application
-```bash
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup
-```
+### Immediate (First 24 hours)
+- [ ] **Verify all systems operational**
+- [ ] **Test user registration flow**
+- [ ] **Generate test contract**
+- [ ] **Monitor error logs**
+- [ ] **Check payment webhooks**
 
-### Step 5: Nginx Configuration
+### First Week
+- [ ] **Monitor user feedback**
+- [ ] **Track conversion metrics**
+- [ ] **Optimize based on real usage**
+- [ ] **Set up regular database backups**
 
-#### Create Nginx Configuration
-```bash
-sudo nano /etc/nginx/sites-available/vibelegal
-```
+### Ongoing
+- [ ] **Regular security updates**
+- [ ] **Monitor dependencies for vulnerabilities**
+- [ ] **Scale infrastructure based on usage**
+- [ ] **Implement user feedback**
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com www.your-domain.com;
+## 🎯 Go-Live Checklist
 
-    # Frontend (React build)
-    location / {
-        root /var/www/vibelegal/frontend/dist;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-        
-        # Cache static assets
-        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-            expires 1y;
-            add_header Cache-Control "public, immutable";
-        }
-    }
+### Final Verification
+- [ ] All critical issues resolved ✅
+- [ ] Security vulnerabilities patched ✅
+- [ ] Database migrations applied ✅
+- [ ] Environment variables configured ✅
+- [ ] Payment processing tested ✅
+- [ ] Domain and SSL configured ✅
+- [ ] Monitoring systems active ✅
 
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
+### Launch Preparation
+- [ ] **Marketing materials ready**
+- [ ] **Support documentation complete**
+- [ ] **User onboarding flow tested**
+- [ ] **Backup and rollback plan prepared**
 
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "no-referrer-when-downgrade" always;
-    add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
-}
-```
+### 🚀 **GO LIVE!**
 
-#### Enable Site
-```bash
-sudo ln -s /etc/nginx/sites-available/vibelegal /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
-```
+---
 
-### Step 6: SSL Certificate (Let's Encrypt)
+## 📋 Quick Deployment Commands
 
-#### Install Certbot
-```bash
-sudo apt install certbot python3-certbot-nginx -y
-```
-
-#### Obtain Certificate
-```bash
-sudo certbot --nginx -d your-domain.com -d www.your-domain.com
-```
-
-#### Auto-renewal
-```bash
-sudo crontab -e
-```
-
-Add:
-```bash
-0 12 * * * /usr/bin/certbot renew --quiet
-```
-
-## ☁️ Cloud Platform Deployment
-
-### Heroku Deployment
-
-#### Prerequisites
-- Heroku CLI installed
-- Git repository
-
-#### Backend Deployment
-```bash
-cd backend
-heroku create vibelegal-backend
-heroku addons:create heroku-postgresql:hobby-dev
-heroku config:set OPENAI_API_KEY=your_key
-heroku config:set JWT_SECRET=<your_jwt_secret>
-git push heroku main
-```
-
-#### Frontend Deployment
+### Frontend Security Fix
 ```bash
 cd frontend
-# Update API endpoints to Heroku backend URL
+npm audit fix --force
 npm run build
-# Deploy to Netlify, Vercel, or similar
 ```
 
-### AWS Deployment
-
-#### Using AWS Elastic Beanstalk
-1. Create Elastic Beanstalk application
-2. Upload backend code as ZIP
-3. Configure environment variables
-4. Set up RDS PostgreSQL instance
-5. Deploy frontend to S3 + CloudFront
-
-#### Using AWS ECS (Docker)
-1. Create Docker images for backend
-2. Push to ECR
-3. Create ECS service
-4. Set up Application Load Balancer
-5. Configure RDS database
-
-### Google Cloud Platform
-
-#### Using App Engine
-```yaml
-# app.yaml for backend
-runtime: nodejs18
-env: standard
-automatic_scaling:
-  min_instances: 1
-  max_instances: 10
-env_variables:
-  DATABASE_URL: "postgresql://..."
-  OPENAI_API_KEY: "..."
-  JWT_SECRET: "..."
-```
-
-## 🐳 Container Deployment
-
-### Docker Setup
-
-#### Backend Dockerfile
-```dockerfile
-# backend/Dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-
-EXPOSE 5000
-
-USER node
-
-CMD ["node", "server.js"]
-```
-
-#### Frontend Dockerfile
-```dockerfile
-# frontend/Dockerfile
-FROM node:18-alpine as builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
-
-EXPOSE 80
-```
-
-#### Docker Compose
-```yaml
-# docker-compose.yml
-version: '3.8'
-
-services:
-  database:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: vibelegal
-      POSTGRES_USER: vibelegal
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/database.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
-
-  backend:
-    build: ./backend
-    environment:
-      DATABASE_URL: postgresql://vibelegal:password@database:5432/vibelegal
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      JWT_SECRET: ${JWT_SECRET}
-      PORT: 5000
-    ports:
-      - "5000:5000"
-    depends_on:
-      - database
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-
-volumes:
-  postgres_data:
-```
-
-#### Deploy with Docker Compose
+### Backend Environment Validation
 ```bash
-# Create .env file with secrets
-# Create a local .env with OPENAI_API_KEY=<your_openai_api_key> > .env
-# …and JWT_SECRET=<your_jwt_secret> >> .env
-
-# Start services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f
+cd backend
+# Add to server.js startup:
+const requiredEnvVars = ['DATABASE_URL', 'OPENAI_API_KEY', 'JWT_SECRET', 'STRIPE_SECRET_KEY'];
+requiredEnvVars.forEach(envVar => {
+  if (!process.env[envVar]) {
+    console.error(`❌ Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+});
 ```
 
-### Kubernetes Deployment
-
-#### Database Deployment
-```yaml
-# k8s/postgres.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: postgres
-  template:
-    metadata:
-      labels:
-        app: postgres
-    spec:
-      containers:
-      - name: postgres
-        image: postgres:15
-        env:
-        - name: POSTGRES_DB
-          value: vibelegal
-        - name: POSTGRES_USER
-          value: vibelegal
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-secret
-              key: password
-        ports:
-        - containerPort: 5432
-        volumeMounts:
-        - name: postgres-storage
-          mountPath: /var/lib/postgresql/data
-      volumes:
-      - name: postgres-storage
-        persistentVolumeClaim:
-          claimName: postgres-pvc
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres-service
-spec:
-  selector:
-    app: postgres
-  ports:
-  - port: 5432
-    targetPort: 5432
-```
-
-#### Backend Deployment
-```yaml
-# k8s/backend.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: vibelegal-backend
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: vibelegal-backend
-  template:
-    metadata:
-      labels:
-        app: vibelegal-backend
-    spec:
-      containers:
-      - name: backend
-        image: vibelegal/backend:latest
-        env:
-        - name: DATABASE_URL
-          value: postgresql://vibelegal:password@postgres-service:5432/vibelegal
-        - name: OPENAI_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: openai-api-key
-        - name: JWT_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: app-secrets
-              key: jwt-secret
-        ports:
-        - containerPort: 5000
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend-service
-spec:
-  selector:
-    app: vibelegal-backend
-  ports:
-  - port: 5000
-    targetPort: 5000
-```
-
-## 🔧 Environment Configuration
-
-### Production Environment Variables
-
-#### Backend (.env)
-```env
-# Server Configuration
-NODE_ENV=production
-PORT=5000
-
-# Database
-DATABASE_URL=postgresql://user:password@host:port/database
-
-# External Services
-OPENAI_API_KEY=<your_openai_api_key>...
-JWT_SECRET=<your_jwt_secret>
-
-# Optional: Logging
-LOG_LEVEL=info
-LOG_FILE=/var/log/vibelegal/app.log
-
-# Optional: Rate Limiting
-RATE_LIMIT_WINDOW_MS=60000
-RATE_LIMIT_MAX_REQUESTS=10
-```
-
-#### Frontend Environment
-Update API endpoints in the frontend code:
-```javascript
-// src/config.js
-const config = {
-  API_BASE_URL: process.env.NODE_ENV === 'production' 
-    ? 'https://api.yourdomain.com' 
-    : 'http://localhost:5000'
-};
-```
-
-## 📊 Monitoring & Maintenance
-
-### Health Checks
+### Database Setup
 ```bash
-# Backend health check
-curl https://api.yourdomain.com/api/health
+# Apply migrations
+psql -d vibelegal -f database.sql
+psql -d vibelegal -f stripe-migration.sql
 
-# Database connection check
-psql -h localhost -U vibelegal -d vibelegal -c "SELECT 1;"
+# Setup Stripe products (optional)
+node setup-stripe.js
 ```
 
-### Log Management
+### Production Build Test
 ```bash
-# PM2 logs
-pm2 logs vibelegal-backend
+# Backend
+cd backend && npm start
 
-# Nginx logs
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-
-# System logs
-sudo journalctl -u nginx -f
+# Frontend  
+cd frontend && npm run build && npm run preview
 ```
 
-### Backup Strategy
-```bash
-# Database backup
-pg_dump -h localhost -U vibelegal vibelegal > backup_$(date +%Y%m%d_%H%M%S).sql
+## 🌐 Recommended Hosting Options
 
-# Automated backup script
-#!/bin/bash
-BACKUP_DIR="/var/backups/vibelegal"
-DATE=$(date +%Y%m%d_%H%M%S)
-mkdir -p $BACKUP_DIR
-pg_dump -h localhost -U vibelegal vibelegal > $BACKUP_DIR/vibelegal_$DATE.sql
-find $BACKUP_DIR -name "*.sql" -mtime +7 -delete
-```
+### **Option 1: Simple & Fast (Recommended for MVP)**
+- **Frontend**: Vercel (free tier)
+- **Backend**: Railway ($5/month)  
+- **Database**: Railway PostgreSQL ($10/month)
+- **Total**: ~$15/month
 
-### Performance Monitoring
-- Set up monitoring with tools like:
-  - **Application**: New Relic, DataDog, or Sentry
-  - **Infrastructure**: Prometheus + Grafana
-  - **Uptime**: Pingdom, UptimeRobot
-  - **Logs**: ELK Stack (Elasticsearch, Logstash, Kibana)
+### **Option 2: AWS Professional**
+- **Frontend**: S3 + CloudFront
+- **Backend**: ECS or Elastic Beanstalk
+- **Database**: RDS PostgreSQL
+- **Total**: ~$50-100/month
 
-## 🔒 Security Checklist
+### **Option 3: Self-Hosted**
+- **Server**: DigitalOcean Droplet ($10/month)
+- **Database**: Managed PostgreSQL ($15/month)
+- **CDN**: Cloudflare (free)
+- **Total**: ~$25/month
 
-### Pre-deployment Security
-- [ ] All secrets in environment variables
-- [ ] Database credentials secured
-- [ ] HTTPS/SSL configured
-- [ ] Security headers configured
-- [ ] Rate limiting enabled
-- [ ] Input validation implemented
-- [ ] CORS properly configured
-- [ ] Dependencies updated
+## Emergency Contacts & Resources
 
-### Post-deployment Security
-- [ ] Regular security updates
-- [ ] Log monitoring
-- [ ] Backup verification
-- [ ] Access control review
-- [ ] SSL certificate renewal
-- [ ] Database security audit
-- [ ] API endpoint testing
+- **Stripe Dashboard**: https://dashboard.stripe.com/
+- **OpenAI Usage**: https://platform.openai.com/usage
+- **Database Management**: [Your hosting provider dashboard]
+- **Domain Management**: [Your domain registrar]
 
-## 🚨 Troubleshooting
-
-### Common Issues
-
-#### "Cannot connect to database"
-```bash
-# Check PostgreSQL status
-sudo systemctl status postgresql
-
-# Check connection
-psql -h localhost -U vibelegal -d vibelegal
-
-# Check logs
-sudo journalctl -u postgresql
-```
-
-#### "OpenAI API errors"
-```bash
-# Test API key
-curl -H "Authorization: Bearer $OPENAI_API_KEY" \
-  https://api.openai.com/v1/models
-
-# Check usage limits
-# Visit OpenAI dashboard
-```
-
-#### "Frontend not loading"
-```bash
-# Check Nginx status
-sudo systemctl status nginx
-
-# Check configuration
-sudo nginx -t
-
-# Check logs
-sudo tail -f /var/log/nginx/error.log
-```
-
-#### "Backend not responding"
-```bash
-# Check PM2 status
-pm2 status
-
-# Restart application
-pm2 restart vibelegal-backend
-
-# Check logs
-pm2 logs vibelegal-backend
-```
-
-### Performance Issues
-
-#### High CPU Usage
-- Check PM2 cluster mode is enabled
-- Monitor database query performance
-- Implement caching (Redis)
-- Optimize OpenAI API calls
-
-#### High Memory Usage
-- Check for memory leaks in Node.js
-- Optimize database connections
-- Implement connection pooling
-- Monitor garbage collection
-
-#### Slow Response Times
-- Enable Nginx gzip compression
-- Implement CDN for static assets
-- Optimize database queries
-- Add application-level caching
-
-## 📈 Scaling Considerations
-
-### Horizontal Scaling
-- Load balancer (nginx, HAProxy, AWS ALB)
-- Multiple backend instances
-- Database read replicas
-- CDN for static assets
-
-### Vertical Scaling
-- Increase server resources
-- Optimize database configuration
-- Tune Node.js performance
-- Implement caching layers
-
-### Database Scaling
-- Connection pooling
-- Read replicas
-- Database sharding
-- Query optimization
-
----
-
-This deployment guide provides comprehensive instructions for deploying VibeLegal in various environments. Choose the deployment method that best fits your requirements and infrastructure.
-
+**Remember**: Start with staging environment first, then production deployment!
