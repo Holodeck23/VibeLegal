@@ -1,6 +1,7 @@
 const express = require('express');
 const { GoogleAIProvider } = require('./ai-providers/google-ai-provider.js');
 const { pool } = require('./db/pool');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
@@ -15,62 +16,53 @@ const router = express.Router();
  * - userInput: string (required when useAI: true)
  * - contractSpec: object (required when useAI: false)
  */
-router.post('/interpret', async (req, res) => {
-  try {
-    const { 
-      userInput, 
-      contractSpec,
-      context = {}, 
-      useAI = true,
-      model = 'gemini-2.5-pro'
-    } = req.body;
+router.post('/interpret', asyncHandler(async (req, res) => {
+  const {
+    userInput,
+    contractSpec,
+    context = {},
+    useAI = true,
+    model = 'gemini-2.5-pro'
+  } = req.body;
 
-    // Direct mode (bypass AI)
-    if (!useAI) {
-      if (!contractSpec || typeof contractSpec !== 'object') {
-        return res.status(400).json({
-          success: false,
-          error: 'contractSpec is required when useAI is false'
-        });
-      }
-
-      return res.json({
-        success: true,
-        contractSpec: contractSpec,
-        userInput: userInput || '[Direct Mode]',
-        provider: { name: 'DirectMode', type: 'local', model: 'none' }
-      });
-    }
-
-    // AI mode - validate input
-    if (!userInput || typeof userInput !== 'string' || userInput.trim().length === 0) {
+  // Direct mode (bypass AI)
+  if (!useAI) {
+    if (!contractSpec || typeof contractSpec !== 'object') {
       return res.status(400).json({
         success: false,
-        error: 'userInput is required and must be a non-empty string when useAI is true'
+        error: 'contractSpec is required when useAI is false'
       });
     }
 
-    // Initialize AI provider with selected model
-    const aiProvider = new GoogleAIProvider({ model });
-    
-    // Generate contract specification using AI
-    const aiGeneratedSpec = await aiProvider.generateContractSpec(userInput, context);
-
-    res.json({
+    return res.json({
       success: true,
-      contractSpec: aiGeneratedSpec,
-      userInput: userInput,
-      provider: aiProvider.getProviderInfo()
-    });
-
-  } catch (error) {
-    console.error('AI Interpreter Error:', error);
-    res.status(500).json({
-      success: false,
-      error: `AI interpretation failed: ${error.message}`
+      contractSpec: contractSpec,
+      userInput: userInput || '[Direct Mode]',
+      provider: { name: 'DirectMode', type: 'local', model: 'none' }
     });
   }
-});
+
+  // AI mode - validate input
+  if (!userInput || typeof userInput !== 'string' || userInput.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: 'userInput is required and must be a non-empty string when useAI is true'
+    });
+  }
+
+  // Initialize AI provider with selected model
+  const aiProvider = new GoogleAIProvider({ model });
+
+  // Generate contract specification using AI
+  const aiGeneratedSpec = await aiProvider.generateContractSpec(userInput, context);
+
+  res.json({
+    success: true,
+    contractSpec: aiGeneratedSpec,
+    userInput: userInput,
+    provider: aiProvider.getProviderInfo()
+  });
+}));
 
 /**
  * Chat Session Management for Conversational AI
@@ -80,81 +72,71 @@ router.post('/interpret', async (req, res) => {
  */
 
 // Start new chat session
-router.post('/chat/start', async (req, res) => {
-  try {
-    const { contractType = 'employment_agreement' } = req.body;
-    const userId = req.user.userId;
+router.post('/chat/start', asyncHandler(async (req, res) => {
+  const { contractType = 'employment_agreement' } = req.body;
+  const userId = req.user.userId;
 
-    const sessionData = {
-      user_id: userId,
-      contract_type: contractType,
-      conversation_state: JSON.stringify({
-        step: 'contract_type',
-        extractedParams: {},
-        messages: [
-          {
-            id: 1,
-            type: 'bot',
-            content: "Hi! I'm your AI legal assistant. I'll help you create a professional employment contract through a simple conversation. What type of employment agreement do you need?",
-            timestamp: new Date().toISOString()
-          }
-        ]
-      })
-    };
+  const sessionData = {
+    user_id: userId,
+    contract_type: contractType,
+    conversation_state: JSON.stringify({
+      step: 'contract_type',
+      extractedParams: {},
+      messages: [
+        {
+          id: 1,
+          type: 'bot',
+          content: "Hi! I'm your AI legal assistant. I'll help you create a professional employment contract through a simple conversation. What type of employment agreement do you need?",
+          timestamp: new Date().toISOString()
+        }
+      ]
+    })
+  };
 
-    const result = await pool.query(
-      `INSERT INTO chat_sessions (user_id, contract_type, conversation_state, created_at) 
-       VALUES ($1, $2, $3, NOW()) 
-       RETURNING id, created_at`,
-      [sessionData.user_id, sessionData.contract_type, sessionData.conversation_state]
-    );
+  const result = await pool.query(
+    `INSERT INTO chat_sessions (user_id, contract_type, conversation_state, created_at)
+     VALUES ($1, $2, $3, NOW())
+     RETURNING id, created_at`,
+    [sessionData.user_id, sessionData.contract_type, sessionData.conversation_state]
+  );
 
-    res.json({
-      success: true,
-      sessionId: result.rows[0].id,
-      conversationState: JSON.parse(sessionData.conversation_state),
-      createdAt: result.rows[0].created_at
-    });
-
-  } catch (error) {
-    console.error('Chat session start error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to start chat session'
-    });
-  }
-});
+  res.json({
+    success: true,
+    sessionId: result.rows[0].id,
+    conversationState: JSON.parse(sessionData.conversation_state),
+    createdAt: result.rows[0].created_at
+  });
+}));
 
 // Send message to chat session
-router.post('/chat/message', async (req, res) => {
-  try {
-    const { sessionId, message, conversationState } = req.body;
-    const userId = req.user.userId;
+router.post('/chat/message', asyncHandler(async (req, res) => {
+  const { sessionId, message, conversationState } = req.body;
+  const userId = req.user.userId;
 
-    // Verify session belongs to user
-    const sessionResult = await pool.query(
-      'SELECT id FROM chat_sessions WHERE id = $1 AND user_id = $2',
-      [sessionId, userId]
-    );
+  // Verify session belongs to user
+  const sessionResult = await pool.query(
+    'SELECT id FROM chat_sessions WHERE id = $1 AND user_id = $2',
+    [sessionId, userId]
+  );
 
-    if (sessionResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Chat session not found'
-      });
-    }
+  if (sessionResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: 'Chat session not found'
+    });
+  }
 
-    // Update conversation state
-    await pool.query(
-      'UPDATE chat_sessions SET conversation_state = $1, updated_at = NOW() WHERE id = $2',
-      [JSON.stringify(conversationState), sessionId]
-    );
+  // Update conversation state
+  await pool.query(
+    'UPDATE chat_sessions SET conversation_state = $1, updated_at = NOW() WHERE id = $2',
+    [JSON.stringify(conversationState), sessionId]
+  );
 
-    // Process message with AI if needed
-    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
-    
-    // Enhanced conversational prompt for natural contract parameter extraction
-    const conversationalPrompt = `You are an AI legal assistant helping extract contract parameters through natural conversation. 
+  // Process message with AI if needed
+  const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
+
+  // Enhanced conversational prompt for natural contract parameter extraction
+  const conversationalPrompt = `You are an AI legal assistant helping extract contract parameters through natural conversation.
 
 Current conversation state: ${JSON.stringify(conversationState)}
 User message: "${message}"
@@ -170,93 +152,67 @@ Based on the conversation, extract any relevant contract parameters and provide 
 
 Respond in a conversational, professional tone. Ask follow-up questions to gather missing information.`;
 
-    res.json({
-      success: true,
-      sessionId,
-      conversationState,
-      timestamp: new Date().toISOString()
-    });
-
-  } catch (error) {
-    console.error('Chat message error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to process chat message'
-    });
-  }
-});
+  res.json({
+    success: true,
+    sessionId,
+    conversationState,
+    timestamp: new Date().toISOString()
+  });
+}));
 
 // Get recent chat sessions for the user
-router.get('/chat/recent', async (req, res) => {
-  try {
-    const userId = req.user.userId;
+router.get('/chat/recent', asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
 
-    const result = await pool.query(
-      'SELECT id, contract_type, created_at, updated_at FROM chat_sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 10',
-      [userId]
-    );
+  const result = await pool.query(
+    'SELECT id, contract_type, created_at, updated_at FROM chat_sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 10',
+    [userId]
+  );
 
-    res.json({
-      success: true,
-      sessions: result.rows
-    });
-  } catch (error) {
-    console.error('Get recent sessions error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to retrieve recent sessions'
-    });
-  }
-});
+  res.json({
+    success: true,
+    sessions: result.rows
+  });
+}));
 
 // Get chat history
-router.get('/chat/:sessionId', async (req, res) => {
-  try {
-    const { sessionId } = req.params;
-    const userId = req.user.userId;
+router.get('/chat/:sessionId', asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const userId = req.user.userId;
 
-    const result = await pool.query(
-      'SELECT * FROM chat_sessions WHERE id = $1 AND user_id = $2',
-      [sessionId, userId]
-    );
+  const result = await pool.query(
+    'SELECT * FROM chat_sessions WHERE id = $1 AND user_id = $2',
+    [sessionId, userId]
+  );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Chat session not found'
-      });
-    }
-
-    const session = result.rows[0];
-    res.json({
-      success: true,
-      session: {
-        id: session.id,
-        contractType: session.contract_type,
-        conversationState: JSON.parse(session.conversation_state),
-        createdAt: session.created_at,
-        updatedAt: session.updated_at
-      }
-    });
-
-  } catch (error) {
-    console.error('Chat history error:', error);
-    res.status(500).json({
+  if (result.rows.length === 0) {
+    return res.status(404).json({
       success: false,
-      error: 'Failed to retrieve chat history'
+      error: 'Chat session not found'
     });
   }
-});
+
+  const session = result.rows[0];
+  res.json({
+    success: true,
+    session: {
+      id: session.id,
+      contractType: session.contract_type,
+      conversationState: JSON.parse(session.conversation_state),
+      createdAt: session.created_at,
+      updatedAt: session.updated_at
+    }
+  });
+}));
 
 // Intelligent contract requirements analysis
-router.post('/analyze-contract-requirements', async (req, res) => {
-  try {
-    const { userInput, conversationContext, analysisType } = req.body;
-    const userId = req.user.userId;
+router.post('/analyze-contract-requirements', asyncHandler(async (req, res) => {
+  const { userInput, conversationContext, analysisType } = req.body;
+  const userId = req.user.userId;
 
-    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
-    
-    // Check for force generation keywords
+  const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
+
+  // Check for force generation keywords
     const forceGenerationKeywords = [
       'generate', 'generate now', 'create contract', 'create the contract', 
       'proceed with contract', 'finish', 'done', 'complete', 'that\'s enough',
@@ -443,30 +399,20 @@ Focus on being an intelligent legal consultant, not a form-filler. Ask smart que
       };
     }
 
-    res.json({
-      success: true,
-      ...aiResponse
-    });
-
-  } catch (error) {
-    console.error('Contract analysis error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to analyze contract requirements',
-      nextQuestion: "I apologize for the technical issue. Could you describe your employment contract needs, and I'll do my best to help?"
-    });
-  }
-});
+  res.json({
+    success: true,
+    ...aiResponse
+  });
+}));
 
 // Legal language enhancement and polish
-router.post('/enhance-contract-language', async (req, res) => {
-  try {
-    const { contractContent, contractParams, aiAnalysis } = req.body;
-    const userId = req.user.userId;
+router.post('/enhance-contract-language', asyncHandler(async (req, res) => {
+  const { contractContent, contractParams, aiAnalysis } = req.body;
+  const userId = req.user.userId;
 
-    const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-pro' });
-    
-    // Build legal enhancement prompt
+  const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-pro' });
+
+  // Build legal enhancement prompt
     const enhancementPrompt = `You are a senior legal expert specializing in employment contract drafting. Your task is to enhance and polish the provided contract content with professional legal language, ensuring:
 
 1. **Professional Legal Terminology**: Replace casual language with precise legal terms
@@ -499,54 +445,36 @@ ${JSON.stringify(aiAnalysis, null, 2)}
     const aiResult = await model.generateContent(enhancementPrompt);
     const enhancedContract = await aiResult.response.text();
 
-    res.json({
-      success: true,
-      enhancedContract: enhancedContract.trim(),
-      enhancements: [
-        "Professional legal terminology applied",
-        "Clause structure and formatting improved", 
-        "Enforceability language strengthened",
-        "Legal compliance verified",
-        "Standard legal provisions added"
-      ]
-    });
-
-  } catch (error) {
-    console.error('Contract enhancement error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to enhance contract language',
-      enhancedContract: contractContent // Return original as fallback
-    });
-  }
-});
+  res.json({
+    success: true,
+    enhancedContract: enhancedContract.trim(),
+    enhancements: [
+      "Professional legal terminology applied",
+      "Clause structure and formatting improved",
+      "Enforceability language strengthened",
+      "Legal compliance verified",
+      "Standard legal provisions added"
+    ]
+  });
+}));
 
 // Get user's recent chat sessions
-router.get('/chat/recent', async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    
-    const result = await pool.query(
-      `SELECT id, contract_type, conversation_state, created_at, updated_at 
-       FROM chat_sessions 
-       WHERE user_id = $1 
-       ORDER BY updated_at DESC 
-       LIMIT 5`,
-      [userId]
-    );
-    
-    res.json({
-      success: true,
-      sessions: result.rows
-    });
-    
-  } catch (error) {
-    console.error('Recent chat sessions error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch recent chat sessions'
-    });
-  }
-});
+router.get('/chat/recent', asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  const result = await pool.query(
+    `SELECT id, contract_type, conversation_state, created_at, updated_at
+     FROM chat_sessions
+     WHERE user_id = $1
+     ORDER BY updated_at DESC
+     LIMIT 5`,
+    [userId]
+  );
+
+  res.json({
+    success: true,
+    sessions: result.rows
+  });
+}));
 
 module.exports = router;

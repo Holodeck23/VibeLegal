@@ -13,6 +13,7 @@ function getStripe() {
 }
 const { pool } = require('./db/pool');
 const { authenticateToken } = require('../middleware/authenticateToken');
+const { asyncHandler } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
@@ -22,294 +23,248 @@ const router = express.Router();
  */
 
 // Get user subscription details
-router.get('/subscription', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
+router.get('/subscription', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
 
-    const result = await pool.query(
-      `SELECT u.subscription_tier, u.contracts_used_this_month, u.created_at,
-              us.status, us.billing_cycle, us.next_billing_date, us.stripe_subscription_id
-       FROM users u
-       LEFT JOIN user_subscriptions us ON u.id = us.user_id
-       WHERE u.id = $1`,
-      [userId]
-    );
+  const result = await pool.query(
+    `SELECT u.subscription_tier, u.contracts_used_this_month, u.created_at,
+            us.status, us.billing_cycle, us.next_billing_date, us.stripe_subscription_id
+     FROM users u
+     LEFT JOIN user_subscriptions us ON u.id = us.user_id
+     WHERE u.id = $1`,
+    [userId]
+  );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    const user = result.rows[0];
-    const tierLimits = getTierLimits(user.subscription_tier);
-
-    res.json({
-      success: true,
-      subscription: {
-        tier: user.subscription_tier,
-        status: user.status || 'active',
-        billingCycle: user.billing_cycle,
-        nextBillingDate: user.next_billing_date,
-        contractsUsed: user.contracts_used_this_month,
-        contractsLimit: tierLimits.monthlyContracts,
-        features: tierLimits.features,
-        stripeSubscriptionId: user.stripe_subscription_id
-      }
-    });
-
-  } catch (error) {
-    console.error('Subscription fetch error:', error);
-    res.status(500).json({
+  if (result.rows.length === 0) {
+    return res.status(404).json({
       success: false,
-      error: 'Failed to fetch subscription details'
+      error: 'User not found'
     });
   }
-});
+
+  const user = result.rows[0];
+  const tierLimits = getTierLimits(user.subscription_tier);
+
+  res.json({
+    success: true,
+    subscription: {
+      tier: user.subscription_tier,
+      status: user.status || 'active',
+      billingCycle: user.billing_cycle,
+      nextBillingDate: user.next_billing_date,
+      contractsUsed: user.contracts_used_this_month,
+      contractsLimit: tierLimits.monthlyContracts,
+      features: tierLimits.features,
+      stripeSubscriptionId: user.stripe_subscription_id
+    }
+  });
+}));
 
 // Check feature access
-router.get('/access/:feature', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { feature } = req.params;
+router.get('/access/:feature', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const { feature } = req.params;
 
-    const result = await pool.query(
-      'SELECT subscription_tier, contracts_used_this_month FROM users WHERE id = $1',
-      [userId]
-    );
+  const result = await pool.query(
+    'SELECT subscription_tier, contracts_used_this_month FROM users WHERE id = $1',
+    [userId]
+  );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
-    }
-
-    const user = result.rows[0];
-    const tierLimits = getTierLimits(user.subscription_tier);
-    const hasAccess = checkFeatureAccess(feature, user.subscription_tier, user.contracts_used_this_month, tierLimits);
-
-    res.json({
-      success: true,
-      hasAccess,
-      tier: user.subscription_tier,
-      reason: hasAccess ? 'access_granted' : getAccessDenialReason(feature, user.subscription_tier, user.contracts_used_this_month, tierLimits)
-    });
-
-  } catch (error) {
-    console.error('Feature access check error:', error);
-    res.status(500).json({
+  if (result.rows.length === 0) {
+    return res.status(404).json({
       success: false,
-      error: 'Failed to check feature access'
+      error: 'User not found'
     });
   }
-});
+
+  const user = result.rows[0];
+  const tierLimits = getTierLimits(user.subscription_tier);
+  const hasAccess = checkFeatureAccess(feature, user.subscription_tier, user.contracts_used_this_month, tierLimits);
+
+  res.json({
+    success: true,
+    hasAccess,
+    tier: user.subscription_tier,
+    reason: hasAccess ? 'access_granted' : getAccessDenialReason(feature, user.subscription_tier, user.contracts_used_this_month, tierLimits)
+  });
+}));
 
 // Create subscription checkout session (Stripe integration)
-router.post('/checkout', authenticateToken, async (req, res) => {
+router.post('/checkout', authenticateToken, asyncHandler(async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) {
+    return res.status(503).json({
+      success: false,
+      error: 'Payment processing is not configured. Please contact support.'
+    });
+  }
+
+  const userId = req.user.userId;
+  const { tier, billingCycle = 'monthly' } = req.body;
+
+  if (!['pro', 'enterprise'].includes(tier)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid subscription tier'
+    });
+  }
+
+  // Get user info for customer creation
+  const userResult = await pool.query('SELECT email, name FROM users WHERE id = $1', [userId]);
+  if (userResult.rows.length === 0) {
+    return res.status(404).json({ success: false, error: 'User not found' });
+  }
+  const user = userResult.rows[0];
+
+  // Create or retrieve Stripe customer
+  let customer;
   try {
-    const stripe = getStripe();
-    if (!stripe) {
-      return res.status(503).json({
-        success: false,
-        error: 'Payment processing is not configured. Please contact support.'
-      });
-    }
+    const existingCustomers = await stripe.customers.list({
+      email: user.email,
+      limit: 1
+    });
 
-    const userId = req.user.userId;
-    const { tier, billingCycle = 'monthly' } = req.body;
-
-    if (!['pro', 'enterprise'].includes(tier)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid subscription tier'
-      });
-    }
-
-    // Get user info for customer creation
-    const userResult = await pool.query('SELECT email, name FROM users WHERE id = $1', [userId]);
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: 'User not found' });
-    }
-    const user = userResult.rows[0];
-
-    // Create or retrieve Stripe customer
-    let customer;
-    try {
-      const existingCustomers = await stripe.customers.list({
+    if (existingCustomers.data.length > 0) {
+      customer = existingCustomers.data[0];
+    } else {
+      customer = await stripe.customers.create({
         email: user.email,
-        limit: 1
-      });
-      
-      if (existingCustomers.data.length > 0) {
-        customer = existingCustomers.data[0];
-      } else {
-        customer = await stripe.customers.create({
-          email: user.email,
-          name: user.name || user.email,
-          metadata: {
-            userId: userId.toString()
-          }
-        });
-      }
-    } catch (stripeError) {
-      console.error('Stripe customer creation error:', stripeError);
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to create customer'
+        name: user.name || user.email,
+        metadata: {
+          userId: userId.toString()
+        }
       });
     }
+  } catch (stripeError) {
+    console.error('Stripe customer creation error:', stripeError);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to create customer'
+    });
+  }
 
-    const price = getPrice(tier, billingCycle);
-    const priceId = getPriceId(tier, billingCycle);
+  const price = getPrice(tier, billingCycle);
+  const priceId = getPriceId(tier, billingCycle);
 
-    // Create checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      payment_method_types: ['card'],
-      line_items: [{
-        price: priceId, // Use actual Stripe price IDs when available
-        quantity: 1,
-      }],
-      mode: 'subscription',
-      success_url: `${process.env.FRONTEND_URL}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/dashboard?upgrade=cancelled`,
+  // Create checkout session
+  const session = await stripe.checkout.sessions.create({
+    customer: customer.id,
+    payment_method_types: ['card'],
+    line_items: [{
+      price: priceId, // Use actual Stripe price IDs when available
+      quantity: 1,
+    }],
+    mode: 'subscription',
+    success_url: `${process.env.FRONTEND_URL}/dashboard?upgrade=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.FRONTEND_URL}/dashboard?upgrade=cancelled`,
+    metadata: {
+      userId: userId.toString(),
+      tier,
+      billingCycle
+    },
+    subscription_data: {
       metadata: {
         userId: userId.toString(),
-        tier,
-        billingCycle
-      },
-      subscription_data: {
-        metadata: {
-          userId: userId.toString(),
-          tier
-        }
-      },
-      allow_promotion_codes: true,
-      billing_address_collection: 'auto'
-    });
-
-    res.json({
-      success: true,
-      checkoutSession: {
-        id: session.id,
-        url: session.url,
-        tier,
-        billingCycle,
-        amount: price
+        tier
       }
-    });
+    },
+    allow_promotion_codes: true,
+    billing_address_collection: 'auto'
+  });
 
-  } catch (error) {
-    console.error('Checkout session creation error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create checkout session'
-    });
-  }
-});
+  res.json({
+    success: true,
+    checkoutSession: {
+      id: session.id,
+      url: session.url,
+      tier,
+      billingCycle,
+      amount: price
+    }
+  });
+}));
 
 // Webhook for handling Stripe subscription events
-router.post('/webhook/stripe', express.raw({type: 'application/json'}), async (req, res) => {
-  let event;
-
-  try {
-    const stripe = getStripe();
-    if (!stripe) {
-      return res.status(503).json({
-        success: false,
-        error: 'Payment processing is not configured'
-      });
-    }
-
-    const sig = req.headers['stripe-signature'];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-    if (webhookSecret) {
-      // Verify webhook signature for security
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    } else {
-      // For development/testing without webhook secret
-      event = JSON.parse(req.body.toString());
-    }
-    
-    console.log('Stripe webhook event:', event.type);
-    
-    switch (event.type) {
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-        await handleSubscriptionUpdate(event.data.object);
-        break;
-      
-      case 'customer.subscription.deleted':
-        await handleSubscriptionCancellation(event.data.object);
-        break;
-        
-      case 'invoice.payment_succeeded':
-        await handlePaymentSuccess(event.data.object);
-        break;
-        
-      case 'invoice.payment_failed':
-        await handlePaymentFailure(event.data.object);
-        break;
-
-      case 'checkout.session.completed':
-        await handleCheckoutCompleted(event.data.object);
-        break;
-        
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
-    }
-
-    res.json({ received: true });
-
-  } catch (error) {
-    console.error('Webhook processing error:', error);
-    res.status(400).json({
+router.post('/webhook/stripe', express.raw({type: 'application/json'}), asyncHandler(async (req, res) => {
+  const stripe = getStripe();
+  if (!stripe) {
+    return res.status(503).json({
       success: false,
-      error: `Webhook Error: ${error.message}`
+      error: 'Payment processing is not configured'
     });
   }
-});
+
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+  if (webhookSecret) {
+    // Verify webhook signature for security
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  } else {
+    // For development/testing without webhook secret
+    event = JSON.parse(req.body.toString());
+  }
+
+  console.log('Stripe webhook event:', event.type);
+
+  switch (event.type) {
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+      await handleSubscriptionUpdate(event.data.object);
+      break;
+
+    case 'customer.subscription.deleted':
+      await handleSubscriptionCancellation(event.data.object);
+      break;
+
+    case 'invoice.payment_succeeded':
+      await handlePaymentSuccess(event.data.object);
+      break;
+
+    case 'invoice.payment_failed':
+      await handlePaymentFailure(event.data.object);
+      break;
+
+    case 'checkout.session.completed':
+      await handleCheckoutCompleted(event.data.object);
+      break;
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+
+  res.json({ received: true });
+}));
 
 // Update user subscription tier
-router.post('/update-tier', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { tier, stripeSubscriptionId } = req.body;
+router.post('/update-tier', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const { tier, stripeSubscriptionId } = req.body;
 
-    await pool.query(
-      'UPDATE users SET subscription_tier = $1 WHERE id = $2',
-      [tier, userId]
-    );
+  await pool.query(
+    'UPDATE users SET subscription_tier = $1 WHERE id = $2',
+    [tier, userId]
+  );
 
-    // Create or update subscription record
-    await pool.query(
-      `INSERT INTO user_subscriptions (user_id, plan_type, status, stripe_subscription_id, created_at)
-       VALUES ($1, $2, 'active', $3, NOW())
-       ON CONFLICT (user_id) 
-       DO UPDATE SET 
-         plan_type = EXCLUDED.plan_type,
-         status = EXCLUDED.status,
-         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
-         updated_at = NOW()`,
-      [userId, tier, stripeSubscriptionId]
-    );
+  // Create or update subscription record
+  await pool.query(
+    `INSERT INTO user_subscriptions (user_id, plan_type, status, stripe_subscription_id, created_at)
+     VALUES ($1, $2, 'active', $3, NOW())
+     ON CONFLICT (user_id)
+     DO UPDATE SET
+       plan_type = EXCLUDED.plan_type,
+       status = EXCLUDED.status,
+       stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+       updated_at = NOW()`,
+    [userId, tier, stripeSubscriptionId]
+  );
 
-    res.json({
-      success: true,
-      message: 'Subscription updated successfully'
-    });
-
-  } catch (error) {
-    console.error('Tier update error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update subscription tier'
-    });
-  }
-});
+  res.json({
+    success: true,
+    message: 'Subscription updated successfully'
+  });
+}));
 
 // Helper Functions
 

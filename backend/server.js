@@ -1,39 +1,18 @@
 // server.js
-// Load env FIRST so anything that reads process.env sees values
+// Load environment variables and validate using Joi schema
 const dotenv = require('dotenv');
 dotenv.config();
 
-// Environment variable validation - fail fast if critical vars are missing
-const requiredEnvVars = [
-  'DATABASE_URL',
-  'OPENAI_API_KEY', 
-  'JWT_SECRET'
-];
+// Load and validate environment configuration (exits on validation failure)
+const env = require('./config/env');
 
-const optionalEnvVars = {
-  'STRIPE_SECRET_KEY': 'Payment processing will be disabled',
-  'STRIPE_WEBHOOK_SECRET': 'Webhook signature verification will be disabled'
-};
-
-console.log('🔍 Validating environment variables...');
-
-// Check required variables
-const missingRequired = requiredEnvVars.filter(envVar => !process.env[envVar]);
-if (missingRequired.length > 0) {
-  console.error('❌ Missing required environment variables:');
-  missingRequired.forEach(envVar => {
-    console.error(`   - ${envVar}`);
-  });
-  console.error('\nPlease add these to your .env file and restart the server.');
-  process.exit(1);
+// Warn about optional Stripe variables if not present
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.warn('⚠️  Optional variable STRIPE_SECRET_KEY not set - Payment processing will be disabled');
 }
-
-// Check optional variables and warn
-Object.entries(optionalEnvVars).forEach(([envVar, warning]) => {
-  if (!process.env[envVar]) {
-    console.warn(`⚠️  Optional variable ${envVar} not set - ${warning}`);
-  }
-});
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+  console.warn('⚠️  Optional variable STRIPE_WEBHOOK_SECRET not set - Webhook signature verification will be disabled');
+}
 
 console.log('✅ Environment validation passed');
 
@@ -44,12 +23,11 @@ const bcrypt = require('bcryptjs');
 const fetch = require("node-fetch");
 const jwt = require('jsonwebtoken');
 
-// If this module validates env on import, keep it; if it causes noise, comment it out.
-const { errorHandler, AppError, asyncHandler } = require('./middleware/errorHandler.js');const env = require('./config/env');
-
+const { errorHandler, AppError, asyncHandler } = require('./middleware/errorHandler.js');
 const { authenticateToken } = require('./middleware/authenticateToken.js');
 const helmet = require('helmet');
-const morgan = require('morgan');const { composeContract } = require('./engine/composer.js');
+const morgan = require('morgan');
+const { composeContract } = require('./engine/composer.js');
 const { composeContractEnhanced } = require('./engine/composer_enhanced.js');
 const aiInterpreter = require('./src/ai-interpreter.js');
 
@@ -140,36 +118,22 @@ setInterval(() => {
 
 // Health (checks DB)
 // Health (checks DB + seeds db_query_duration_seconds)
-app.get('/api/health', async (_req, res) => {
-  try {
-    const r = await timedQuery('SELECT 1 AS ok', [], 'health_check');
-    const dbOk = r.rows?.[0]?.ok === 1;
-    res.status(dbOk ? 200 : 503).json({
-      status: dbOk ? 'ok' : 'degraded',
-      db: dbOk ? 'up' : 'down',
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    });
-  } catch (e) {
-    res.status(503).json({
-      status: 'down',
-      db: 'down',
-      error: e.message,
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-    });
-  }
-});
+app.get('/api/health', asyncHandler(async (_req, res) => {
+  const r = await timedQuery('SELECT 1 AS ok', [], 'health_check');
+  const dbOk = r.rows?.[0]?.ok === 1;
+  res.status(dbOk ? 200 : 503).json({
+    status: dbOk ? 'ok' : 'degraded',
+    db: dbOk ? 'up' : 'down',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+}));
 
 // Metrics (Prometheus)
-app.get('/api/metrics', async (_req, res) => {
-  try {
-    res.set('Content-Type', register.contentType);
-    res.end(await register.metrics());
-  } catch (e) {
-    res.status(500).send(e.message);
-  }
-});
+app.get('/api/metrics', asyncHandler(async (_req, res) => {
+  res.set('Content-Type', register.contentType);
+  res.end(await register.metrics());
+}));
 
 // Password validation helper
 function validatePassword(password) {
@@ -190,182 +154,164 @@ function validatePassword(password) {
 }
 
 // Auth: register
-app.post('/api/register', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+app.post('/api/register', asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
-    // Validate password strength
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({
-        error: 'Password does not meet requirements',
-        requirements: passwordValidation.errors
-      });
-    }
-
-    const existingUser = await timedQuery('SELECT 1 FROM users WHERE email = $1', [email], 'register_user_exists');
-    if (existingUser.rowCount > 0) return res.status(400).json({ error: 'User already exists' });
-
-    const hash = await bcrypt.hash(password, 10);
-    const result = await timedQuery(
-      `INSERT INTO users (email, password_hash, subscription_tier, contracts_used_this_month)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, email, subscription_tier`,
-      [email, hash, 'basic', 0],
-      'register_insert_user'
-    );
-
-    const user = result.rows[0];
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    res.status(201).json({
-      message: 'User created successfully',
-      token,
-      user: { id: user.id, email: user.email, subscription_tier: user.subscription_tier }
+  // Validate password strength
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) {
+    return res.status(400).json({
+      error: 'Password does not meet requirements',
+      requirements: passwordValidation.errors
     });
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
   }
-});
+
+  const existingUser = await timedQuery('SELECT 1 FROM users WHERE email = $1', [email], 'register_user_exists');
+  if (existingUser.rowCount > 0) return res.status(400).json({ error: 'User already exists' });
+
+  const hash = await bcrypt.hash(password, 10);
+  const result = await timedQuery(
+    `INSERT INTO users (email, password_hash, subscription_tier, contracts_used_this_month)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, email, subscription_tier`,
+    [email, hash, 'basic', 0],
+    'register_insert_user'
+  );
+
+  const user = result.rows[0];
+  const token = jwt.sign(
+    { userId: user.id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+
+  res.status(201).json({
+    message: 'User created successfully',
+    token,
+    user: { id: user.id, email: user.email, subscription_tier: user.subscription_tier }
+  });
+}));
 
 // Auth: login
-app.post('/api/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+app.post('/api/login', asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
 
-    const result = await timedQuery('SELECT * FROM users WHERE email = $1', [email], 'login_user_lookup');
-    if (result.rowCount === 0) return res.status(401).json({ error: 'Invalid credentials' });
+  const result = await timedQuery('SELECT * FROM users WHERE email = $1', [email], 'login_user_lookup');
+  if (result.rowCount === 0) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const user = result.rows[0];
-    const ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+  const user = result.rows[0];
+  const ok = await bcrypt.compare(password, user.password_hash);
+  if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+  const token = jwt.sign(
+    { userId: user.id, email: user.email },
+    process.env.JWT_SECRET,
+    { expiresIn: '24h' }
+  );
 
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        subscription_tier: user.subscription_tier,
-        contracts_used_this_month: user.contracts_used_this_month
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  res.json({
+    message: 'Login successful',
+    token,
+    user: {
+      id: user.id,
+      email: user.email,
+      subscription_tier: user.subscription_tier,
+      contracts_used_this_month: user.contracts_used_this_month
+    }
+  });
+}));
 
 // Generate contract
-app.post('/api/generate-contract', authenticateToken, async (req, res) => {
+app.post('/api/generate-contract', authenticateToken, asyncHandler(async (req, res) => {
   const userInput = req.body;
   if (!userInput || !userInput.parameters || !userInput.contractType) {
     return res.status(400).json({ error: 'Invalid request payload. Missing parameters or contractType.' });
   }
+
+  // First, analyze requirements with AI
+  const aiAnalysisRequest = {
+    userInput: userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`,
+    useAI: true,
+    model: "gemini-2.5-pro"
+  };
+
+  let aiResult = null;
   try {
-    // First, analyze requirements with AI
-    const aiAnalysisRequest = {
-      userInput: userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`,
-      useAI: true,
-      model: "gemini-2.5-pro"
-    };
-    
-    let aiResult = null;
-    try {
-      const aiResponse = await fetch(`http://localhost:5000/api/ai/interpret`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: req.headers.authorization
-        },
-        body: JSON.stringify(aiAnalysisRequest)
-      });
-      aiResult = await aiResponse.json();
-    } catch (aiError) {
-      console.log("AI analysis failed, using standard generation:", aiError.message);
-    }
-    
-    const enhancedUserInput = {
-      ...userInput,
-      aiSpec: aiResult?.success ? aiResult.contractSpec : null
-    };
-    
-    const contractContent = await composeContract(enhancedUserInput);
-    res.status(200).json({
-      message: "Contract generated with AI analysis.",
-      contract: contractContent,
-      aiAnalysis: aiResult?.success ? aiResult.contractSpec : "AI analysis unavailable",
-      savedContract: { content: contractContent, title: userInput.parameters.title || "AI-Enhanced Contract" }
+    const aiResponse = await fetch(`http://localhost:5000/api/ai/interpret`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: req.headers.authorization
+      },
+      body: JSON.stringify(aiAnalysisRequest)
     });
-  } catch (error) {
-    console.error('Contract generation failed:', error);
-    res.status(500).json({ error: 'Failed to generate contract.' });
+    aiResult = await aiResponse.json();
+  } catch (aiError) {
+    console.log("AI analysis failed, using standard generation:", aiError.message);
   }
-});
+
+  const enhancedUserInput = {
+    ...userInput,
+    aiSpec: aiResult?.success ? aiResult.contractSpec : null
+  };
+
+  const contractContent = await composeContract(enhancedUserInput);
+  res.status(200).json({
+    message: "Contract generated with AI analysis.",
+    contract: contractContent,
+    aiAnalysis: aiResult?.success ? aiResult.contractSpec : "AI analysis unavailable",
+    savedContract: { content: contractContent, title: userInput.parameters.title || "AI-Enhanced Contract" }
+  });
+}));
 
 // Enhanced contract generation endpoint
-app.post('/api/generate-contract-enhanced', authenticateToken, async (req, res) => {
+app.post('/api/generate-contract-enhanced', authenticateToken, asyncHandler(async (req, res) => {
   const { userInput } = req.body;
   if (!userInput || !userInput.parameters || !userInput.contractType) {
     return res.status(400).json({ error: 'Invalid request payload.' });
   }
+
+  // First, analyze requirements with AI
+  const aiAnalysisRequest = {
+    userInput: userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`,
+    useAI: true,
+    model: "gemini-2.5-pro"
+  };
+
+  let aiResult = null;
   try {
-    // First, analyze requirements with AI
-    const aiAnalysisRequest = {
-      userInput: userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`,
-      useAI: true,
-      model: "gemini-2.5-pro"
-    };
-    
-    let aiResult = null;
-    try {
-      const aiResponse = await fetch(`http://localhost:5000/api/ai/interpret`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: req.headers.authorization
-        },
-        body: JSON.stringify(aiAnalysisRequest)
-      });
-      aiResult = await aiResponse.json();
-    } catch (aiError) {
-      console.log("AI analysis failed, using enhanced generation:", aiError.message);
-    }
-    
-    const enhancedUserInput = {
-      ...userInput,
-      aiSpec: aiResult?.success ? aiResult.contractSpec : null
-    };
-    
-    const contractContent = await composeContractEnhanced(enhancedUserInput);
-    res.json({
-      contract: contractContent.content,
-      metadata: contractContent.metadata,
-      aiAnalysis: aiResult?.success ? aiResult.contractSpec : "AI analysis unavailable",
-      savedContract: {
-        content: contractContent.content,
-        title: userInput.parameters.title || "AI-Enhanced CA Employment Contract",
-        version: "enhanced"
-      }
+    const aiResponse = await fetch(`http://localhost:5000/api/ai/interpret`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: req.headers.authorization
+      },
+      body: JSON.stringify(aiAnalysisRequest)
     });
-  } catch (error) {
-    console.error('Enhanced contract generation failed:', error);
-    res.status(500).json({ error: 'Failed to generate enhanced contract.' });
+    aiResult = await aiResponse.json();
+  } catch (aiError) {
+    console.log("AI analysis failed, using enhanced generation:", aiError.message);
   }
-});
+
+  const enhancedUserInput = {
+    ...userInput,
+    aiSpec: aiResult?.success ? aiResult.contractSpec : null
+  };
+
+  const contractContent = await composeContractEnhanced(enhancedUserInput);
+  res.json({
+    contract: contractContent.content,
+    metadata: contractContent.metadata,
+    aiAnalysis: aiResult?.success ? aiResult.contractSpec : "AI analysis unavailable",
+    savedContract: {
+      content: contractContent.content,
+      title: userInput.parameters.title || "AI-Enhanced CA Employment Contract",
+      version: "enhanced"
+    }
+  });
+}));
 
 // Feature flags endpoint
 app.get('/api/features', authenticateToken, (req, res) => {
@@ -377,133 +323,109 @@ app.get('/api/features', authenticateToken, (req, res) => {
 });
 
 // Clause library endpoint for Enhanced mode
-app.get('/api/clause-library', authenticateToken, async (req, res) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    
-    const clauseLibraryPath = path.join(__dirname, 'clause_library_enhanced.json');
-    const clauseLibrary = JSON.parse(fs.readFileSync(clauseLibraryPath, 'utf8'));
-    
-    res.json(clauseLibrary);
-  } catch (error) {
-    console.error('Error loading clause library:', error);
-    res.status(500).json({ error: 'Failed to load clause library' });
-  }
-});
+app.get('/api/clause-library', authenticateToken, asyncHandler(async (req, res) => {
+  const fs = require('fs');
+  const path = require('path');
+
+  const clauseLibraryPath = path.join(__dirname, 'clause_library_enhanced.json');
+  const clauseLibrary = JSON.parse(fs.readFileSync(clauseLibraryPath, 'utf8'));
+
+  res.json(clauseLibrary);
+}));
 
 // Delete contract
-app.delete('/api/contracts/:id', authenticateToken, async (req, res) => {
-  try {
-    const contractId = req.params.id;
-    const userId = req.user.userId;
+app.delete('/api/contracts/:id', authenticateToken, asyncHandler(async (req, res) => {
+  const contractId = req.params.id;
+  const userId = req.user.userId;
 
-    // Verify contract belongs to user before deleting
-    const result = await pool.query(
-      'DELETE FROM contracts WHERE id = $1 AND user_id = $2 RETURNING id',
-      [contractId, userId]
-    );
+  // Verify contract belongs to user before deleting
+  const result = await pool.query(
+    'DELETE FROM contracts WHERE id = $1 AND user_id = $2 RETURNING id',
+    [contractId, userId]
+  );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Contract not found or unauthorized' });
-    }
-
-    res.json({ message: 'Contract deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting contract:', error);
-    res.status(500).json({ error: 'Failed to delete contract' });
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'Contract not found or unauthorized' });
   }
-});
+
+  res.json({ message: 'Contract deleted successfully' });
+}));
 
 // List user contracts with accurate counts
-app.get('/api/user-contracts', authenticateToken, async (req, res) => {
-  try {
-    const [contractsResult, totalCountResult, monthlyCountResult] = await Promise.all([
-      timedQuery(
-        `SELECT id, title, contract_type, created_at
-         FROM contracts
-         WHERE user_id = $1
-         ORDER BY created_at DESC`,
-        [req.user.userId],
-        'contracts_list_by_user'
-      ),
-      timedQuery(
-        `SELECT COUNT(*) as total_count
-         FROM contracts
-         WHERE user_id = $1`,
-        [req.user.userId],
-        'contracts_total_count'
-      ),
-      timedQuery(
-        `SELECT COUNT(*) as monthly_count
-         FROM contracts
-         WHERE user_id = $1 AND created_at >= date_trunc('month', CURRENT_DATE)`,
-        [req.user.userId],
-        'contracts_monthly_count'
-      )
-    ]);
+app.get('/api/user-contracts', authenticateToken, asyncHandler(async (req, res) => {
+  const [contractsResult, totalCountResult, monthlyCountResult] = await Promise.all([
+    timedQuery(
+      `SELECT id, title, contract_type, created_at
+       FROM contracts
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.userId],
+      'contracts_list_by_user'
+    ),
+    timedQuery(
+      `SELECT COUNT(*) as total_count
+       FROM contracts
+       WHERE user_id = $1`,
+      [req.user.userId],
+      'contracts_total_count'
+    ),
+    timedQuery(
+      `SELECT COUNT(*) as monthly_count
+       FROM contracts
+       WHERE user_id = $1 AND created_at >= date_trunc('month', CURRENT_DATE)`,
+      [req.user.userId],
+      'contracts_monthly_count'
+    )
+  ]);
 
-    res.json({ 
-      contracts: contractsResult.rows,
-      totalCount: parseInt(totalCountResult.rows[0].total_count),
-      monthlyCount: parseInt(monthlyCountResult.rows[0].monthly_count)
-    });
-  } catch (error) {
-    console.error('Get contracts error:', error);
-    res.status(500).json({ error: 'Failed to retrieve contracts' });
-  }
-});
+  res.json({
+    contracts: contractsResult.rows,
+    totalCount: parseInt(totalCountResult.rows[0].total_count),
+    monthlyCount: parseInt(monthlyCountResult.rows[0].monthly_count)
+  });
+}));
 
 // Save contract
-app.post('/api/save-contract', authenticateToken, async (req, res) => {
-  try {
-    const { title, contractType, content } = req.body;
-    const { userId } = req.user;
-    if (!title || !contractType || !content) {
-      return res.status(400).json({ error: 'Missing required contract data.' });
-    }
-    const result = await timedQuery(
-      `INSERT INTO contracts (user_id, title, contract_type, content)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [userId, title, contractType, content],
-      'contracts_insert'
-    );
-    await timedQuery(
-      `UPDATE users
-       SET contracts_used_this_month = contracts_used_this_month + 1
-       WHERE id = $1`,
-      [userId],
-      'users_increment_contracts_used'
-    );
-    res.status(201).json({ message: 'Contract saved successfully!', savedContract: result.rows[0] });
-  } catch (error) {
-    console.error('Save contract error:', error);
-    res.status(500).json({ error: 'Failed to save contract.' });
+app.post('/api/save-contract', authenticateToken, asyncHandler(async (req, res) => {
+  const { title, contractType, content } = req.body;
+  const { userId } = req.user;
+  if (!title || !contractType || !content) {
+    return res.status(400).json({ error: 'Missing required contract data.' });
+  }
+  const result = await timedQuery(
+    `INSERT INTO contracts (user_id, title, contract_type, content)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [userId, title, contractType, content],
+    'contracts_insert'
+  );
+  await timedQuery(
+    `UPDATE users
+     SET contracts_used_this_month = contracts_used_this_month + 1
+     WHERE id = $1`,
+    [userId],
+    'users_increment_contracts_used'
+  );
+  res.status(201).json({ message: 'Contract saved successfully!', savedContract: result.rows[0] });
+}));
+
+// Get individual contract by ID
+app.get('/api/contracts/:id', authenticateToken, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.user;
+
+  const result = await timedQuery(
+    `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
+    [id, userId],
+    'contracts_get_by_id'
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'Contract not found.' });
   }
 
-});// Get individual contract by ID
-app.get('/api/contracts/:id', authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { userId } = req.user;
-    
-    const result = await timedQuery(
-      `SELECT * FROM contracts WHERE id = $1 AND user_id = $2`,
-      [id, userId],
-      'contracts_get_by_id'
-    );
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Contract not found.' });
-    }
-    
-    res.json({ contract: result.rows[0] });
-  } catch (error) {
-    console.error('Get contract error:', error);
-    res.status(500).json({ error: 'Failed to retrieve contract.' });
-  }
-});
+  res.json({ contract: result.rows[0] });
+}));
 
 app.use("*", (req, res) => {
   res.status(404).json({
