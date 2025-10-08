@@ -24,7 +24,7 @@ const router = express.Router();
 // Get user subscription details
 router.get('/subscription', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const result = await pool.query(
       `SELECT u.subscription_tier, u.contracts_used_this_month, u.created_at,
@@ -71,7 +71,7 @@ router.get('/subscription', authenticateToken, async (req, res) => {
 // Check feature access
 router.get('/access/:feature', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const { feature } = req.params;
 
     const result = await pool.query(
@@ -117,7 +117,7 @@ router.post('/checkout', authenticateToken, async (req, res) => {
       });
     }
 
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const { tier, billingCycle = 'monthly' } = req.body;
 
     if (!['pro', 'enterprise'].includes(tier)) {
@@ -276,7 +276,7 @@ router.post('/webhook/stripe', express.raw({type: 'application/json'}), async (r
 // Update user subscription tier
 router.post('/update-tier', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     const { tier, stripeSubscriptionId } = req.body;
 
     await pool.query(

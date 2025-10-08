@@ -33,7 +33,12 @@ release.log
 *.local
 *.secret
 *.bak
+*.backup
+*.backup-*
+*.save
+*.save.*
 *.tmp
+*.old
 
 # Test coverage
 coverage/

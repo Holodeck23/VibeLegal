@@ -83,7 +83,7 @@ router.post('/interpret', async (req, res) => {
 router.post('/chat/start', async (req, res) => {
   try {
     const { contractType = 'employment_agreement' } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const sessionData = {
       user_id: userId,
@@ -129,7 +129,7 @@ router.post('/chat/start', async (req, res) => {
 router.post('/chat/message', async (req, res) => {
   try {
     const { sessionId, message, conversationState } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     // Verify session belongs to user
     const sessionResult = await pool.query(
@@ -186,11 +186,34 @@ Respond in a conversational, professional tone. Ask follow-up questions to gathe
   }
 });
 
+// Get recent chat sessions for the user
+router.get('/chat/recent', async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const result = await pool.query(
+      'SELECT id, contract_type, created_at, updated_at FROM chat_sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 10',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      sessions: result.rows
+    });
+  } catch (error) {
+    console.error('Get recent sessions error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve recent sessions'
+    });
+  }
+});
+
 // Get chat history
 router.get('/chat/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const result = await pool.query(
       'SELECT * FROM chat_sessions WHERE id = $1 AND user_id = $2',
@@ -229,7 +252,7 @@ router.get('/chat/:sessionId', async (req, res) => {
 router.post('/analyze-contract-requirements', async (req, res) => {
   try {
     const { userInput, conversationContext, analysisType } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
     
@@ -439,7 +462,7 @@ Focus on being an intelligent legal consultant, not a form-filler. Ask smart que
 router.post('/enhance-contract-language', async (req, res) => {
   try {
     const { contractContent, contractParams, aiAnalysis } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-pro' });
     
@@ -501,7 +524,7 @@ ${JSON.stringify(aiAnalysis, null, 2)}
 // Get user's recent chat sessions
 router.get('/chat/recent', async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
     
     const result = await pool.query(
       `SELECT id, contract_type, conversation_state, created_at, updated_at 
