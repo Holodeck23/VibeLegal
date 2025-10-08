@@ -24,6 +24,7 @@ const Register = () => {
     { text: 'Contains uppercase letter', met: /[A-Z]/.test(password) },
     { text: 'Contains lowercase letter', met: /[a-z]/.test(password) },
     { text: 'Contains number', met: /\d/.test(password) },
+    { text: 'Contains special character (!@#$%^&*...)', met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
   ];
 
   const handleSubmit = async (e) => {
@@ -35,8 +36,10 @@ const Register = () => {
       return;
     }
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long');
+    // Validate all password requirements
+    const allRequirementsMet = passwordRequirements.every(req => req.met);
+    if (!allRequirementsMet) {
+      setError('Password must meet all requirements');
       return;
     }
 

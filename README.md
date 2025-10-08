@@ -213,9 +213,16 @@ Access the application at `http://localhost:5173`
 ## 🧪 Testing
 
 ### Test Account
-- **Email**: test2@vibelegal.com  
-- **Password**: password  
-- **Status**: 21 total contracts, 1 this month
+- **Email**: test2@vibelegal.com
+- **Password**: DemoPassword123!
+- **Status**: 28 total contracts (Pro tier)
+
+**Password Requirements:**
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character (!@#$%^&*...)
 
 ### Manual Testing Checklist
 - [ ] User registration and authentication  

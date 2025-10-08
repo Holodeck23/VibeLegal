@@ -171,11 +171,38 @@ app.get('/api/metrics', async (_req, res) => {
   }
 });
 
+// Password validation helper
+function validatePassword(password) {
+  const minLength = 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+  const errors = [];
+  if (password.length < minLength) errors.push('Password must be at least 8 characters');
+  if (!hasUpperCase) errors.push('Password must contain at least one uppercase letter');
+  if (!hasLowerCase) errors.push('Password must contain at least one lowercase letter');
+  if (!hasNumber) errors.push('Password must contain at least one number');
+  if (!hasSpecialChar) errors.push('Password must contain at least one special character (!@#$%^&*...)');
+
+  return { valid: errors.length === 0, errors };
+}
+
 // Auth: register
 app.post('/api/register', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        error: 'Password does not meet requirements',
+        requirements: passwordValidation.errors
+      });
+    }
 
     const existingUser = await timedQuery('SELECT 1 FROM users WHERE email = $1', [email], 'register_user_exists');
     if (existingUser.rowCount > 0) return res.status(400).json({ error: 'User already exists' });
