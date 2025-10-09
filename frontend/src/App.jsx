@@ -23,6 +23,10 @@ import { FeedbackButton } from './components/FeedbackButton';
 import Footer from './components/Footer';
 import { ToastProvider } from './components/Toast';
 
+// Admin Components
+import { AdminLayout } from './components/admin/AdminLayout';
+import { AdminDashboard } from './components/admin/AdminDashboard';
+
 // Context for authentication
 export const AuthContext = React.createContext();
 
@@ -100,38 +104,50 @@ function App() {
       <AuthContext.Provider value={{ user, login, logout, handleAuthError }}>
         <Router>
         <div className="min-h-screen bg-gray-50">
-          <Navbar />
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
-            <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/disclaimers" element={<Disclaimers />} />
-            <Route path="/beta" element={<Beta />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route 
-              path="/dashboard" 
-              element={user ? <Dashboard /> : <Navigate to="/login" />} 
-            />
-            <Route 
-              path="/create-contract" 
-              element={user ? <ContractForm /> : <Navigate to="/login" />} 
-            />
-            <Route 
-              path="/contract-result" 
-              element={user ? <ContractResult /> : <Navigate to="/login" />} 
-            />
-            <Route 
-              path="/contracts/:id" 
-              element={user ? <ContractViewer /> : <Navigate to="/login" />} 
-            />
+            {/* Admin Routes - No Navbar/Footer */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+            </Route>
+
+            {/* Public Routes with Navbar/Footer */}
+            <Route path="*" element={
+              <>
+                <Navbar />
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+                  <Route path="/register" element={user ? <Navigate to="/dashboard" /> : <Register />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/disclaimers" element={<Disclaimers />} />
+                  <Route path="/beta" element={<Beta />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route
+                    path="/dashboard"
+                    element={user ? <Dashboard /> : <Navigate to="/login" />}
+                  />
+                  <Route
+                    path="/create-contract"
+                    element={user ? <ContractForm /> : <Navigate to="/login" />}
+                  />
+                  <Route
+                    path="/contract-result"
+                    element={user ? <ContractResult /> : <Navigate to="/login" />}
+                  />
+                  <Route
+                    path="/contracts/:id"
+                    element={user ? <ContractViewer /> : <Navigate to="/login" />}
+                  />
+                </Routes>
+                <Footer />
+                <FeedbackButton />
+              </>
+            } />
           </Routes>
-          <Footer />
-          <FeedbackButton />
         </div>
       </Router>
     </AuthContext.Provider>
