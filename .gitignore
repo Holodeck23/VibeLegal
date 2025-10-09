@@ -39,6 +39,8 @@ release.log
 *.save.*
 *.tmp
 *.old
+*_backup*
+*.simple-backup
 
 # Test coverage
 coverage/
@@ -46,3 +48,8 @@ coverage/
 # VSCode / IDE settings
 .vscode/
 .idea/
+.claude/
+
+# Agent artifacts
+.agent-os/specs/
+*.spec.temp
