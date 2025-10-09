@@ -52,6 +52,10 @@ app.use('/api/ai', authenticateToken, aiInterpreter);
 const subscriptionService = require('./src/subscription-service.js');
 app.use('/api/user', subscriptionService);
 
+// --- Admin Service ---
+const adminService = require('./src/admin-service.js');
+app.use('/api/admin', adminService);
+
 // --- Prometheus metrics ---
 const register = new prom.Registry();
 prom.collectDefaultMetrics({ register });
