@@ -37,8 +37,10 @@ function selectClauseVariation(clauseKey, preferences = {}, clauses) {
 async function composeContractEnhanced(userInput) {
   try {
     console.log("🚀 Master Input Brief Enhanced Composer with preferences:", userInput.preferences);
-    console.log("📊 Parameters received:", Object.keys(userInput.parameters || {}).length);
-    console.log("🎯 Key parameters:", Object.keys(userInput.parameters || {}).filter(k => userInput.parameters[k] && userInput.parameters[k] !== '').slice(0, 10));
+    const userParameters = userInput.parameters || {};
+    console.log("📊 Parameters received:", Object.keys(userParameters).length);
+    console.log("🎯 Key parameters:", Object.keys(userParameters).filter(k => userParameters[k] && userParameters[k] !== '').slice(0, 10));
+    const parameterDefaults = buildParameterDefaults(userParameters);
     const enhancedClauses = JSON.parse(await fs.readFile(CLAUSES_ENHANCED_PATH, 'utf-8'));
     const originalClauses = JSON.parse(await fs.readFile(CLAUSES_ORIGINAL_PATH, 'utf-8'));
     const scaffold = JSON.parse(await fs.readFile(path.join(__dirname, '..', 'contract_employment_agreement.json'), 'utf-8'));
@@ -70,7 +72,7 @@ async function composeContractEnhanced(userInput) {
         legal_justification: selectedVariation.legal_justification || 'Standard legal provision'
       });
 
-      const populatedClause = populatePlaceholders(selectedVariation.clause, userInput.parameters);
+      const populatedClause = populatePlaceholders(selectedVariation.clause, userParameters, parameterDefaults);
       const title = selectedVariation.title || enhancedClauses.clauses[clauseKey]?.title || clauseKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
       
       return `## ${index + 1}. ${title}\n\n${populatedClause}\n\n`;
@@ -89,25 +91,29 @@ async function composeContractEnhanced(userInput) {
         jurisdiction: "California",
         contract_type: "Employment Agreement",
         parameter_extraction: {
-          total_parameters_provided: Object.keys(parameters).filter(k => parameters[k] && parameters[k] !== '').length,
-          parameters_used: Object.keys(parameterDefaults).filter(k => 
-            parameters[k] && parameters[k] !== '' && !parameterDefaults[k].startsWith('[') 
-          ).length,
+          total_parameters_provided: Object.keys(userParameters).filter(k => userParameters[k] && userParameters[k] !== '').length,
+          parameters_used: Object.keys(parameterDefaults).filter(k => {
+            const providedValue = userParameters[k];
+            const defaultValue = parameterDefaults[k];
+            return providedValue && providedValue !== '' && !(typeof defaultValue === 'string' && defaultValue.startsWith('['));
+          }).length,
           master_input_brief_coverage: Math.round(
-            (Object.keys(parameterDefaults).filter(k => 
-              parameters[k] && parameters[k] !== '' && !parameterDefaults[k].startsWith('[') 
-            ).length / Object.keys(parameterDefaults).length) * 100
+            (Object.keys(parameterDefaults).filter(k => {
+              const providedValue = userParameters[k];
+              const defaultValue = parameterDefaults[k];
+              return providedValue && providedValue !== '' && !(typeof defaultValue === 'string' && defaultValue.startsWith('['));
+            }).length / Object.keys(parameterDefaults).length) * 100
           ) + '%'
         },
         strategic_protections: {
-          confidentiality: !!(parameters['Confidentiality'] || parameters['Confidentiality Duration']),
-          ip_assignment: !!(parameters['IP Assignment']),
-          non_compete: !!(parameters['Non-Compete'] || parameters['Non-Compete Period']),
-          non_solicitation: !!(parameters['Non-Solicitation'] || parameters['Non-Solicitation Period']),
-          severance: !!(parameters['Severance Policy']),
-          equity_terms: !!(parameters['Equity Compensation'] || parameters['Vesting Schedule']),
-          probation_terms: !!(parameters['Probation Period'] || parameters['Probationary Period Length']),
-          performance_reviews: !!(parameters['Performance Reviews'])
+          confidentiality: !!(userParameters['Confidentiality'] || userParameters['Confidentiality Duration']),
+          ip_assignment: !!(userParameters['IP Assignment']),
+          non_compete: !!(userParameters['Non-Compete'] || userParameters['Non-Compete Period']),
+          non_solicitation: !!(userParameters['Non-Solicitation'] || userParameters['Non-Solicitation Period']),
+          severance: !!(userParameters['Severance Policy']),
+          equity_terms: !!(userParameters['Equity Compensation'] || userParameters['Vesting Schedule']),
+          probation_terms: !!(userParameters['Probation Period'] || userParameters['Probationary Period Length']),
+          performance_reviews: !!(userParameters['Performance Reviews'])
         }
       }
     };
@@ -127,9 +133,8 @@ async function composeContractEnhanced(userInput) {
   }
 }
 
-function populatePlaceholders(text, parameters) {
-  // Master Input Brief Parameter Defaults - Comprehensive parameter mapping
-  const parameterDefaults = {
+function buildParameterDefaults(parameters = {}) {
+  return {
     // CORE EMPLOYMENT DETAILS
     'Employee Name': parameters['Employee Name'] || parameters['Other Party Name'] || parameters.otherPartyName || '[Employee Name]',
     'Other Party Name': parameters['Other Party Name'] || parameters['Employee Name'] || parameters.otherPartyName || '[Employee Name]',
@@ -139,17 +144,17 @@ function populatePlaceholders(text, parameters) {
     'Reports To': parameters['Reports To'] || parameters.reportsTo || 'designated supervisor',
     'Supervisor Name': parameters['Supervisor Name'] || parameters['Reports To'] || 'designated supervisor',
     'Supervisor Title': parameters['Supervisor Title'] || 'Manager',
-    
+
     // COMPENSATION & BENEFITS
     'Annual Salary': parameters['Annual Salary'] || parameters['Salary Amount'] || parameters.amount || '$85,000',
-    'Salary Amount': parameters['Salary Amount'] || parameters['Annual Salary'] || parameters.amount || '$85,000', 
+    'Salary Amount': parameters['Salary Amount'] || parameters['Annual Salary'] || parameters.amount || '$85,000',
     'Hourly Rate': parameters['Hourly Rate'] || parameters.hourlyRate || '$40.00/hour',
     'Employment Type': parameters['Employment Type'] || 'Full-time',
     'Work Hours': parameters['Work Hours'] || '40 hours per week',
     'Bonus Structure': parameters['Bonus Structure'] || parameters.bonus || 'Performance-based bonus eligibility',
     'Equity Compensation': parameters['Equity Compensation'] || parameters.equity || '',
     'Vesting Schedule': parameters['Vesting Schedule'] || parameters.vesting || '',
-    
+
     // BENEFITS DETAILS
     'Health Insurance': parameters['Health Insurance'] || 'Comprehensive health insurance coverage',
     'Dental Insurance': parameters['Dental Insurance'] || parameters.dental || '',
@@ -158,7 +163,7 @@ function populatePlaceholders(text, parameters) {
     'PTO Policy': parameters['PTO Policy'] || parameters['Annual PTO Days'] || '15 days paid time off annually',
     'Annual PTO Days': parameters['Annual PTO Days'] || parameters['PTO Policy'] || '15',
     'Sick Leave': parameters['Sick Leave'] || 'Accrued sick leave per California law',
-    
+
     // EMPLOYMENT TERMS
     'Start Date': parameters['Start Date'] || new Date().toLocaleDateString(),
     'Probation Period': parameters['Probation Period'] || parameters['Probationary Period Length'] || '90 days',
@@ -166,11 +171,11 @@ function populatePlaceholders(text, parameters) {
     'Performance Reviews': parameters['Performance Reviews'] || 'Annual performance evaluations',
     'Notice Period': parameters['Notice Period'] || '2 weeks written notice',
     'Severance Policy': parameters['Severance Policy'] || parameters.severance || '',
-    
+
     // WORK ARRANGEMENT
     'Work Arrangement': parameters['Work Arrangement'] || parameters.workArrangement || 'On-site with remote work flexibility',
     'Work Location': parameters['Work Location'] || parameters.workLocation || 'Company offices and approved remote locations',
-    
+
     // LEGAL PROTECTIONS
     'Confidentiality': parameters['Confidentiality'] || 'Confidentiality and non-disclosure obligations',
     'Confidentiality Duration': parameters['Confidentiality Duration'] || '2 years post-termination',
@@ -180,7 +185,7 @@ function populatePlaceholders(text, parameters) {
     'Non-Solicitation Period': parameters['Non-Solicitation Period'] || parameters['Non-Solicitation'] || '1 year',
     'Non-Solicitation': parameters['Non-Solicitation'] || 'Non-solicitation of employees and clients',
     'Expense Reimbursement': parameters['Expense Reimbursement'] || 'Reimbursement for approved business expenses within 30 days',
-    
+
     // STANDARD LEGAL DETAILS
     'Company Registration': parameters['Company Registration'] || 'C0000000',
     'Employee SSN': '[To be provided by employee]', // Never require SSN in template
@@ -195,55 +200,59 @@ function populatePlaceholders(text, parameters) {
     'State of Incorporation': parameters['State of Incorporation'] || parameters['State'] || 'California',
     'Arbitration Provider, e.g., JAMS': 'JAMS',
     'Specify County, e.g., Los Angeles County': parameters['Specify County, e.g., Los Angeles County'] || 'Los Angeles County',
-    
+
     // ADDITIONAL STRATEGIC PARAMETERS
     'Pay Period': parameters['Pay Period'] || parameters.payPeriod || 'year',
     'hour/year': parameters['hour/year'] || 'year'
   };
-  
-  console.log('🎯 Master Input Brief - Processing parameters:', Object.keys(parameters).length, 'parameters');
-  console.log('📋 Available parameters:', Object.keys(parameters).filter(k => parameters[k] && parameters[k] !== '').slice(0, 10));
+}
+
+function populatePlaceholders(text, parameters = {}, parameterDefaultsOverride) {
+  const parameterDefaults = parameterDefaultsOverride || buildParameterDefaults(parameters);
+  const safeParameters = parameters || {};
+
+  console.log('🎯 Master Input Brief - Processing parameters:', Object.keys(safeParameters).length, 'parameters');
+  console.log('📋 Available parameters:', Object.keys(safeParameters).filter(k => safeParameters[k] && safeParameters[k] !== '').slice(0, 10));
 
   return text.replace(/\[([\w\s/.,]+)\]/g, (match, placeholderName) => {
     const key = placeholderName.trim();
-    
-    // Use parameter defaults if available (priority order)
-    if (parameterDefaults.hasOwnProperty(key)) {
+
+    if (Object.prototype.hasOwnProperty.call(parameterDefaults, key)) {
       const defaultValue = parameterDefaults[key];
-      if (defaultValue && defaultValue !== '' && !defaultValue.startsWith('[')) {
+      if (defaultValue && defaultValue !== '' && !(typeof defaultValue === 'string' && defaultValue.startsWith('['))) {
         return defaultValue;
       }
     }
-    
-    // Direct parameter lookup with comprehensive key matching
-    const directValue = parameters[key] || parameters[key.toLowerCase()] || parameters[key.replace(/\s+/g, '')];
+
+    const lowerKey = key.toLowerCase();
+    const condensedKey = key.replace(/\s+/g, '');
+    const directValue = safeParameters[key] ?? safeParameters[lowerKey] ?? safeParameters[condensedKey];
     if (directValue !== undefined && directValue !== null && directValue !== '') {
       return directValue;
     }
-    
-    // Advanced parameter matching for common variations
+
     const keyVariations = [
-      key.toLowerCase(),
-      key.replace(/\s+/g, ''),
+      lowerKey,
+      condensedKey,
       key.replace(/\s+/g, '_'),
       key.replace(/_/g, ' '),
       key.replace(/([a-z])([A-Z])/g, '$1 $2')
     ];
-    
+
     for (const variation of keyVariations) {
-      if (parameters[variation] !== undefined && parameters[variation] !== null && parameters[variation] !== '') {
-        console.log(`📝 Found parameter variation: ${key} -> ${variation} = ${parameters[variation]}`);
-        return parameters[variation];
+      const variationValue = safeParameters[variation];
+      if (variationValue !== undefined && variationValue !== null && variationValue !== '') {
+        console.log(`📝 Found parameter variation: ${key} -> ${variation} = ${variationValue}`);
+        return variationValue;
       }
     }
-    
-    // Return parameter default even if placeholder, or warn
-    if (parameterDefaults.hasOwnProperty(key)) {
+
+    if (Object.prototype.hasOwnProperty.call(parameterDefaults, key)) {
       return parameterDefaults[key];
     }
-    
-    console.warn(`⚠️  Missing parameter: ${key} (available: ${Object.keys(parameters).slice(0, 5).join(', ')}...)`);
-    return `[${key}]`; // Clean placeholder for contract review
+
+    console.warn(`⚠️  Missing parameter: ${key} (available: ${Object.keys(safeParameters).slice(0, 5).join(', ')}...)`);
+    return `[${key}]`;
   });
 }
 

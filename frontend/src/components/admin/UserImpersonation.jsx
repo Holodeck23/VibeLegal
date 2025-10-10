@@ -43,7 +43,14 @@ export function UserImpersonation({ user, isOpen, onClose }) {
       }
 
       const data = await response.json();
-      setImpersonationData(data);
+      const normalizedData = {
+        ...data,
+        impersonation_token: data?.impersonation_token || data?.token || '',
+        expires_in: typeof data?.expires_in === 'number'
+          ? data.expires_in
+          : (typeof data?.expiresIn === 'number' ? data.expiresIn : 3600)
+      };
+      setImpersonationData(normalizedData);
     } catch (err) {
       console.error('Failed to generate impersonation token:', err);
       setError(err.message);
@@ -82,8 +89,12 @@ export function UserImpersonation({ user, isOpen, onClose }) {
   };
 
   const formatExpiresIn = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
+    const totalSeconds = typeof seconds === 'number' ? seconds : Number(seconds);
+    if (Number.isNaN(totalSeconds)) {
+      return 'Unknown';
+    }
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
     return `${hours}h ${minutes}m`;
   };
 

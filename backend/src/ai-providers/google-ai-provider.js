@@ -25,7 +25,6 @@ class GoogleAIProvider extends AIProvider {
       let text = response.text();
 
       // Strip markdown code blocks if present
-      console.log("Raw AI response:", JSON.stringify(text));
       text = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       
       // Parse and validate JSON response

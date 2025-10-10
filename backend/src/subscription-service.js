@@ -14,6 +14,7 @@ function getStripe() {
 const { pool } = require('./db/pool');
 const { authenticateToken } = require('../middleware/authenticateToken');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { getTierLimits, TIER_LIMITS } = require('./subscription-limits');
 
 const router = express.Router();
 
@@ -246,72 +247,133 @@ router.post('/update-tier', authenticateToken, asyncHandler(async (req, res) => 
   const userId = req.user.userId;
   const { tier, stripeSubscriptionId } = req.body;
 
+  const allowedTiers = Object.keys(TIER_LIMITS);
+  if (!allowedTiers.includes(tier)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid subscription tier'
+    });
+  }
+
+  if (tier === 'basic') {
+    await pool.query(
+      'UPDATE users SET subscription_tier = $1 WHERE id = $2',
+      ['basic', userId]
+    );
+
+    await pool.query(
+      `UPDATE user_subscriptions
+       SET status = 'canceled', updated_at = NOW()
+       WHERE user_id = $1`,
+      [userId]
+    );
+
+    return res.json({
+      success: true,
+      message: 'Subscription downgraded to basic tier'
+    });
+  }
+
+  if (!stripeSubscriptionId) {
+    return res.status(400).json({
+      success: false,
+      error: 'stripeSubscriptionId is required for paid tiers'
+    });
+  }
+
+  const stripe = getStripe();
+  if (!stripe) {
+    return res.status(503).json({
+      success: false,
+      error: 'Payment processing is not configured. Please contact support.'
+    });
+  }
+
+  let subscription;
+  try {
+    subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+  } catch (error) {
+    console.error('Unable to retrieve Stripe subscription during tier update:', error);
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid or inaccessible Stripe subscription.'
+    });
+  }
+
+  if (!subscription) {
+    return res.status(403).json({
+      success: false,
+      error: 'Stripe subscription is not active.'
+    });
+  }
+
+  const activeStatuses = new Set(['active', 'trialing']);
+  if (!activeStatuses.has(subscription.status)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Stripe subscription is not active.'
+    });
+  }
+
+  if (subscription.metadata?.userId !== String(userId)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Subscription does not belong to this user.'
+    });
+  }
+
+  const derivedTier = deriveTierFromSubscription(subscription);
+  if (!derivedTier) {
+    return res.status(400).json({
+      success: false,
+      error: 'Unable to determine subscription tier from Stripe data.'
+    });
+  }
+
+  if (tier !== derivedTier) {
+    return res.status(400).json({
+      success: false,
+      error: 'Requested tier does not match Stripe subscription.'
+    });
+  }
+
   await pool.query(
     'UPDATE users SET subscription_tier = $1 WHERE id = $2',
-    [tier, userId]
+    [derivedTier, userId]
   );
 
-  // Create or update subscription record
   await pool.query(
-    `INSERT INTO user_subscriptions (user_id, plan_type, status, stripe_subscription_id, created_at)
-     VALUES ($1, $2, 'active', $3, NOW())
+    `INSERT INTO user_subscriptions (user_id, plan_type, status, stripe_subscription_id, stripe_customer_id, current_period_start, current_period_end, created_at)
+     VALUES ($1, $2, $3, $4, $5, to_timestamp($6), to_timestamp($7), NOW())
      ON CONFLICT (user_id)
      DO UPDATE SET
        plan_type = EXCLUDED.plan_type,
        status = EXCLUDED.status,
        stripe_subscription_id = EXCLUDED.stripe_subscription_id,
+       stripe_customer_id = EXCLUDED.stripe_customer_id,
+       current_period_start = EXCLUDED.current_period_start,
+       current_period_end = EXCLUDED.current_period_end,
        updated_at = NOW()`,
-    [userId, tier, stripeSubscriptionId]
+    [
+      userId,
+      derivedTier,
+      subscription.status,
+      subscription.id,
+      subscription.customer,
+      subscription.current_period_start || null,
+      subscription.current_period_end || null
+    ]
   );
 
   res.json({
     success: true,
-    message: 'Subscription updated successfully'
+    message: 'Subscription updated successfully',
+    tier: derivedTier,
+    status: subscription.status
   });
 }));
 
 // Helper Functions
-
-function getTierLimits(tier) {
-  const limits = {
-    basic: {
-      monthlyContracts: 5,
-      features: ['basic_contract_generation'],
-      price: 0
-    },
-    pro: {
-      monthlyContracts: -1, // unlimited
-      features: [
-        'basic_contract_generation',
-        'conversational_ai',
-        'advanced_customization',
-        'risk_tolerance_controls',
-        'legal_stance_selection',
-        'contract_versioning',
-        'priority_support'
-      ],
-      price: { monthly: 29, yearly: 290 }
-    },
-    enterprise: {
-      monthlyContracts: -1, // unlimited
-      features: [
-        'basic_contract_generation',
-        'conversational_ai',
-        'advanced_customization',
-        'risk_tolerance_controls',
-        'legal_stance_selection',
-        'contract_versioning',
-        'team_collaboration',
-        'usage_analytics',
-        'priority_support',
-        'dedicated_support'
-      ],
-      price: { monthly: 99, yearly: 990 }
-    }
-  };
-
-  return limits[tier] || limits.basic;
-}
 
 function checkFeatureAccess(feature, tier, contractsUsed, tierLimits) {
   // Check if feature is included in tier
@@ -362,6 +424,38 @@ function getPriceId(tier, billingCycle) {
   };
 
   return priceIds[tier]?.[billingCycle] || null;
+}
+
+function getPriceIdToTierMap() {
+  return {
+    [process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly_fallback']: 'pro',
+    [process.env.STRIPE_PRO_YEARLY_PRICE_ID || 'price_pro_yearly_fallback']: 'pro',
+    [process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID || 'price_enterprise_monthly_fallback']: 'enterprise',
+    [process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID || 'price_enterprise_yearly_fallback']: 'enterprise'
+  };
+}
+
+function deriveTierFromSubscription(subscription) {
+  const metadataTier = subscription?.metadata?.tier;
+  if (metadataTier && TIER_LIMITS[metadataTier]) {
+    return metadataTier;
+  }
+
+  const priceItem = subscription?.items?.data?.[0]?.price;
+  const priceMetadataTier = priceItem?.metadata?.tier;
+  if (priceMetadataTier && TIER_LIMITS[priceMetadataTier]) {
+    return priceMetadataTier;
+  }
+
+  const priceId = priceItem?.id;
+  if (priceId) {
+    const map = getPriceIdToTierMap();
+    if (map[priceId]) {
+      return map[priceId];
+    }
+  }
+
+  return null;
 }
 
 async function handleCheckoutCompleted(session) {
