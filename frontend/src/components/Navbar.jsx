@@ -2,7 +2,7 @@ import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import { Button } from '@/components/ui/button';
-import { Scale, Menu, X } from 'lucide-react';
+import { Scale, Menu, X, Shield } from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -40,6 +40,12 @@ const Navbar = () => {
                 <Link to="/create-contract" className="text-gray-700 hover:text-blue-600 transition-colors">
                   Create Contract
                 </Link>
+                {user.is_admin && (
+                  <Link to="/admin" className="flex items-center text-blue-600 hover:text-blue-800 transition-colors font-medium">
+                    <Shield className="h-4 w-4 mr-1" />
+                    Admin
+                  </Link>
+                )}
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-600">
                     {user.email}
@@ -100,6 +106,16 @@ const Navbar = () => {
                   >
                     Create Contract
                   </Link>
+                  {user.is_admin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center px-3 py-2 text-blue-600 hover:text-blue-800 font-medium"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Admin Dashboard
+                    </Link>
+                  )}
                   <div className="px-3 py-2">
                     <p className="text-sm text-gray-600 mb-2">{user.email}</p>
                     <Button onClick={handleLogout} variant="outline" size="sm" className="w-full">

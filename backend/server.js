@@ -52,6 +52,10 @@ app.use('/api/ai', authenticateToken, aiInterpreter);
 const subscriptionService = require('./src/subscription-service.js');
 app.use('/api/user', subscriptionService);
 
+// --- Admin Service ---
+const adminService = require('./src/admin-service.js');
+app.use('/api/admin', adminService);
+
 // --- Prometheus metrics ---
 const register = new prom.Registry();
 prom.collectDefaultMetrics({ register });
@@ -218,7 +222,8 @@ app.post('/api/login', asyncHandler(async (req, res) => {
       id: user.id,
       email: user.email,
       subscription_tier: user.subscription_tier,
-      contracts_used_this_month: user.contracts_used_this_month
+      contracts_used_this_month: user.contracts_used_this_month,
+      is_admin: user.is_admin || false
     }
   });
 }));
