@@ -29,7 +29,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const { composeContract } = require('./engine/composer.js');
 const { composeContractEnhanced } = require('./engine/composer_enhanced.js');
-const aiInterpreter = require('./src/ai-interpreter.js');
+const { router: aiInterpreter, interpretWithAI } = require('./src/ai-interpreter.js');
 
 // DB pool (single source of truth)
 const { pool, checkDb } = require('./src/db/pool');
@@ -236,23 +236,11 @@ app.post('/api/generate-contract', authenticateToken, asyncHandler(async (req, r
   }
 
   // First, analyze requirements with AI
-  const aiAnalysisRequest = {
-    userInput: userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`,
-    useAI: true,
-    model: "gemini-2.5-pro"
-  };
+  const aiUserInput = userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`;
 
   let aiResult = null;
   try {
-    const aiResponse = await fetch(`http://localhost:5000/api/ai/interpret`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: req.headers.authorization
-      },
-      body: JSON.stringify(aiAnalysisRequest)
-    });
-    aiResult = await aiResponse.json();
+    aiResult = await interpretWithAI(aiUserInput, {}, "gemini-2.5-pro");
   } catch (aiError) {
     console.log("AI analysis failed, using standard generation:", aiError.message);
   }
@@ -279,23 +267,11 @@ app.post('/api/generate-contract-enhanced', authenticateToken, asyncHandler(asyn
   }
 
   // First, analyze requirements with AI
-  const aiAnalysisRequest = {
-    userInput: userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`,
-    useAI: true,
-    model: "gemini-2.5-pro"
-  };
+  const aiUserInput = userInput.requirements || `Generate employment contract for ${userInput.parameters["Employee Name"] || "employee"} at ${userInput.parameters["Company Name"] || "company"}`;
 
   let aiResult = null;
   try {
-    const aiResponse = await fetch(`http://localhost:5000/api/ai/interpret`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: req.headers.authorization
-      },
-      body: JSON.stringify(aiAnalysisRequest)
-    });
-    aiResult = await aiResponse.json();
+    aiResult = await interpretWithAI(aiUserInput, {}, "gemini-2.5-pro");
   } catch (aiError) {
     console.log("AI analysis failed, using enhanced generation:", aiError.message);
   }

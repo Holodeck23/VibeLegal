@@ -14,7 +14,14 @@ const schema = Joi.object({
   JWT_SECRET: Joi.string().min(24).required()
     .messages({ 'any.required': 'JWT_SECRET is required' }),
 
-  CORS_ORIGIN: Joi.string().default('*')
+  CORS_ORIGIN: Joi.string().default('*'),
+
+  // Optional but recommended for production
+  STRIPE_SECRET_KEY: Joi.string().when('NODE_ENV', { is: 'production', then: Joi.required() }),
+  STRIPE_WEBHOOK_SECRET: Joi.string().when('NODE_ENV', { is: 'production', then: Joi.required() }),
+  STRIPE_PRO_MONTHLY_PRICE_ID: Joi.string().when('NODE_ENV', { is: 'production', then: Joi.required() }),
+  STRIPE_PRO_YEARLY_PRICE_ID: Joi.string().when('NODE_ENV', { is: 'production', then: Joi.required() }),
+  FRONTEND_URL: Joi.string().uri().when('NODE_ENV', { is: 'production', then: Joi.required() })
 }).unknown(true);
 
 const { value: env, error } = schema.validate(process.env, { abortEarly: false });

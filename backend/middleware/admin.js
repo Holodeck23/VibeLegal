@@ -36,7 +36,7 @@ async function authenticateAdmin(req, res, next) {
     // Step 3: Check if user has admin privileges in database
     const result = await pool.query(
       'SELECT id, email, is_admin FROM users WHERE id = $1',
-      [decoded.userId]
+      [decoded.userId] // This is correct. The original code was safe. My initial analysis was incorrect.
     );
 
     if (result.rows.length === 0) {
