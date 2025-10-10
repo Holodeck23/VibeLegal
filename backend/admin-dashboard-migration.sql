@@ -20,12 +20,15 @@ COMMENT ON COLUMN users.is_admin IS 'Flag indicating if user has admin privilege
 -- 2. Create Admin Actions Audit Log Table
 -- =============================================================================
 
+-- Ensure pgcrypto is available for UUID generation (id column)
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- Create admin_actions table for comprehensive audit trail
 CREATE TABLE admin_actions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    admin_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     action_type VARCHAR(50) NOT NULL,
-    target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    target_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     description TEXT,
     metadata JSONB,
     ip_address INET,

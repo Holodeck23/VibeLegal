@@ -272,6 +272,8 @@ router.post('/users/:userId/impersonate', authenticateAdmin, asyncHandler(async 
 
   const user = userResult.rows[0];
 
+  const impersonationTtlSeconds = 60 * 60; // 1 hour
+
   // Generate impersonation token
   const token = jwt.sign(
     {
@@ -282,7 +284,7 @@ router.post('/users/:userId/impersonate', authenticateAdmin, asyncHandler(async 
       isImpersonation: true
     },
     process.env.JWT_SECRET,
-    { expiresIn: '1h' }
+    { expiresIn: impersonationTtlSeconds }
   );
 
   // Log admin action
@@ -301,11 +303,13 @@ router.post('/users/:userId/impersonate', authenticateAdmin, asyncHandler(async 
 
   res.json({
     success: true,
-    token: token,
+    impersonation_token: token,
+    token, // Backward compatibility for older clients
     user: {
       id: user.id,
       email: user.email
     },
+    expires_in: impersonationTtlSeconds,
     expiresIn: '1 hour',
     warning: 'This token is for debugging purposes only. All actions will be tracked.'
   });

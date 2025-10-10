@@ -33,17 +33,42 @@ const { router: aiInterpreter, interpretWithAI } = require('./src/ai-interpreter
 
 // DB pool (single source of truth)
 const { pool, checkDb } = require('./src/db/pool');
+const { getTierLimits } = require('./src/subscription-limits');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const configuredOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
+const defaultOrigins = ['http://localhost:3000', 'http://localhost:5173'];
+const allowList = configuredOrigins.length > 0 ? configuredOrigins : defaultOrigins;
 
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      return callback(null, true);
+    }
+    if (allowList.includes(origin)) {
+      return callback(null, true);
+    }
+    console.warn(`Rejected CORS origin: ${origin}`);
+    return callback(null, false);
+  },
+  credentials: configuredOrigins.length > 0
+};
 
-const allowedOrigin = process.env.CORS_ORIGIN || "*";
-app.use(cors({
-  origin: allowedOrigin === "*" ? true : allowedOrigin,
-  credentials: true,
-}));app.use(helmet());
-app.use(morgan('combined'));app.use(express.json());
+app.use(cors(corsOptions));
+app.use(helmet());
+app.use(morgan('combined'));
+
+const jsonParser = express.json();
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/api/user/webhook/stripe')) {
+    return next();
+  }
+  return jsonParser(req, res, next);
+});
 
 // --- AI Interpreter ---
 app.use('/api/ai', authenticateToken, aiInterpreter);
@@ -88,6 +113,15 @@ async function timedQuery(sql, params, operation = 'generic') {
   const end = dbQueryDuration.startTimer({ operation });
   try {
     return await pool.query(sql, params);
+  } finally {
+    end();
+  }
+}
+
+async function timedClientQuery(client, sql, params, operation = 'generic') {
+  const end = dbQueryDuration.startTimer({ operation });
+  try {
+    return await client.query(sql, params);
   } finally {
     end();
   }
@@ -370,24 +404,90 @@ app.get('/api/user-contracts', authenticateToken, asyncHandler(async (req, res) 
 app.post('/api/save-contract', authenticateToken, asyncHandler(async (req, res) => {
   const { title, contractType, content } = req.body;
   const { userId } = req.user;
+
   if (!title || !contractType || !content) {
     return res.status(400).json({ error: 'Missing required contract data.' });
   }
-  const result = await timedQuery(
-    `INSERT INTO contracts (user_id, title, contract_type, content)
-     VALUES ($1, $2, $3, $4)
-     RETURNING *`,
-    [userId, title, contractType, content],
-    'contracts_insert'
-  );
-  await timedQuery(
-    `UPDATE users
-     SET contracts_used_this_month = contracts_used_this_month + 1
-     WHERE id = $1`,
-    [userId],
-    'users_increment_contracts_used'
-  );
-  res.status(201).json({ message: 'Contract saved successfully!', savedContract: result.rows[0] });
+
+  const client = await pool.connect();
+  try {
+    await timedClientQuery(client, 'BEGIN', [], 'contracts_begin');
+
+    const userResult = await timedClientQuery(
+      client,
+      `SELECT id, subscription_tier, contracts_used_this_month
+       FROM users
+       WHERE id = $1
+       FOR UPDATE`,
+      [userId],
+      'users_select_for_contract'
+    );
+
+    if (userResult.rows.length === 0) {
+      await timedClientQuery(client, 'ROLLBACK', [], 'contracts_rollback_user_missing');
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    const user = userResult.rows[0];
+    const tier = user.subscription_tier || 'basic';
+    const tierLimits = getTierLimits(tier);
+
+    let monthlyCountResult = null;
+    if (tierLimits.monthlyContracts !== -1) {
+      monthlyCountResult = await timedClientQuery(
+        client,
+        `SELECT COUNT(*)::int AS monthly_count
+         FROM contracts
+         WHERE user_id = $1
+           AND created_at >= date_trunc('month', CURRENT_DATE)`,
+        [userId],
+        'contracts_monthly_count_for_save'
+      );
+
+      const monthlyCount = monthlyCountResult.rows[0].monthly_count;
+      if (monthlyCount >= tierLimits.monthlyContracts) {
+        await timedClientQuery(client, 'ROLLBACK', [], 'contracts_rollback_quota');
+        return res.status(403).json({
+          error: 'Monthly contract limit reached for your plan.'
+        });
+      }
+    }
+
+    const insertResult = await timedClientQuery(
+      client,
+      `INSERT INTO contracts (user_id, title, contract_type, content)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [userId, title, contractType, content],
+      'contracts_insert'
+    );
+
+    const updatedMonthlyCount = monthlyCountResult
+      ? monthlyCountResult.rows[0].monthly_count + 1
+      : user.contracts_used_this_month + 1;
+
+    await timedClientQuery(
+      client,
+      `UPDATE users
+       SET contracts_used_this_month = $2, updated_at = NOW()
+       WHERE id = $1`,
+      [userId, updatedMonthlyCount],
+      'users_increment_contracts_used'
+    );
+
+    await timedClientQuery(client, 'COMMIT', [], 'contracts_commit');
+
+    res.status(201).json({ message: 'Contract saved successfully!', savedContract: insertResult.rows[0] });
+  } catch (error) {
+    try {
+      await timedClientQuery(client, 'ROLLBACK', [], 'contracts_rollback_error');
+    } catch (rollbackError) {
+      console.error('Failed to rollback contract transaction:', rollbackError);
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }));
 
 // Get individual contract by ID
