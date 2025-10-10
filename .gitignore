@@ -53,3 +53,6 @@ coverage/
 # Agent artifacts
 .agent-os/specs/
 *.spec.temp
+
+# Archive folder (historical code, not for deployment)
+archive/
