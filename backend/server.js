@@ -222,7 +222,8 @@ app.post('/api/login', asyncHandler(async (req, res) => {
       id: user.id,
       email: user.email,
       subscription_tier: user.subscription_tier,
-      contracts_used_this_month: user.contracts_used_this_month
+      contracts_used_this_month: user.contracts_used_this_month,
+      is_admin: user.is_admin || false
     }
   });
 }));

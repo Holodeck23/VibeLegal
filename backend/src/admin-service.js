@@ -314,7 +314,7 @@ router.post('/users/:userId/impersonate', authenticateAdmin, asyncHandler(async 
 /**
  * GET /api/admin/metrics/overview
  * Get system-wide metrics overview
- * Returns user counts, contract counts, subscription breakdown
+ * Returns user counts, contract counts, subscription breakdown, and revenue metrics
  */
 router.get('/metrics/overview', authenticateAdmin, asyncHandler(async (req, res) => {
   // Get total users
@@ -328,6 +328,14 @@ router.get('/metrics/overview', authenticateAdmin, asyncHandler(async (req, res)
   `);
   const newUsersThisMonth = parseInt(newUsersResult.rows[0].count);
 
+  // Get new users last month (for growth calculation)
+  const newUsersLastMonthResult = await pool.query(`
+    SELECT COUNT(*) FROM users
+    WHERE created_at >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
+      AND created_at < date_trunc('month', CURRENT_DATE)
+  `);
+  const newUsersLastMonth = parseInt(newUsersLastMonthResult.rows[0].count);
+
   // Get total contracts
   const totalContractsResult = await pool.query('SELECT COUNT(*) FROM contracts');
   const totalContracts = parseInt(totalContractsResult.rows[0].count);
@@ -338,6 +346,14 @@ router.get('/metrics/overview', authenticateAdmin, asyncHandler(async (req, res)
     WHERE created_at >= date_trunc('month', CURRENT_DATE)
   `);
   const contractsThisMonth = parseInt(contractsThisMonthResult.rows[0].count);
+
+  // Get contracts last month (for growth calculation)
+  const contractsLastMonthResult = await pool.query(`
+    SELECT COUNT(*) FROM contracts
+    WHERE created_at >= date_trunc('month', CURRENT_DATE - INTERVAL '1 month')
+      AND created_at < date_trunc('month', CURRENT_DATE)
+  `);
+  const contractsLastMonth = parseInt(contractsLastMonthResult.rows[0].count);
 
   // Get subscription breakdown
   const subscriptionBreakdownResult = await pool.query(`
@@ -359,15 +375,71 @@ router.get('/metrics/overview', authenticateAdmin, asyncHandler(async (req, res)
   `);
   const activeSubscriptions = parseInt(activeSubscriptionsResult.rows[0].count);
 
+  // Calculate MRR (Monthly Recurring Revenue)
+  const tierPricing = {
+    basic: 0,
+    pro: 29,
+    enterprise: 99
+  };
+
+  let mrr = 0;
+  let revenueByTier = {};
+
+  Object.keys(subscriptionBreakdown).forEach(tier => {
+    const tierRevenue = (subscriptionBreakdown[tier] || 0) * (tierPricing[tier] || 0);
+    revenueByTier[tier] = tierRevenue;
+    mrr += tierRevenue;
+  });
+
+  // Get failed payments count (if payment_history table exists)
+  let failedPayments = 0;
+  try {
+    const failedPaymentsResult = await pool.query(`
+      SELECT COUNT(*) FROM payment_history
+      WHERE status = 'failed'
+        AND created_at >= date_trunc('month', CURRENT_DATE)
+    `);
+    failedPayments = parseInt(failedPaymentsResult.rows[0].count);
+  } catch (error) {
+    // Payment history table doesn't exist yet - default to 0
+    console.log('Payment history table not yet implemented - failed payments defaulted to 0');
+  }
+
+  // Calculate growth rates
+  const userGrowthRate = newUsersLastMonth > 0
+    ? ((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth * 100).toFixed(1)
+    : newUsersThisMonth > 0 ? 100 : 0;
+
+  const contractGrowthRate = contractsLastMonth > 0
+    ? ((contractsThisMonth - contractsLastMonth) / contractsLastMonth * 100).toFixed(1)
+    : contractsThisMonth > 0 ? 100 : 0;
+
   res.json({
     success: true,
     metrics: {
+      // User metrics
       totalUsers,
       newUsersThisMonth,
+      newUsersLastMonth,
+      userGrowthRate: parseFloat(userGrowthRate),
+
+      // Contract metrics
       totalContracts,
       contractsThisMonth,
+      contractsLastMonth,
+      contractGrowthRate: parseFloat(contractGrowthRate),
       activeSubscriptions,
-      subscriptionBreakdown
+
+      // Subscription breakdown
+      subscriptionBreakdown,
+
+      // Revenue metrics
+      mrr,
+      revenueByTier,
+      failedPayments,
+
+      // Pricing reference (for frontend display)
+      tierPricing
     }
   });
 }));

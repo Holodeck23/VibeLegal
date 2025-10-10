@@ -26,6 +26,8 @@ import { ToastProvider } from './components/Toast';
 // Admin Components
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { UserList } from './components/admin/UserList';
+import { UserDetail } from './components/admin/UserDetail';
 
 // Context for authentication
 export const AuthContext = React.createContext();
@@ -108,6 +110,8 @@ function App() {
             {/* Admin Routes - No Navbar/Footer */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<UserList />} />
+              <Route path="users/:userId" element={<UserDetail />} />
             </Route>
 
             {/* Public Routes with Navbar/Footer */}

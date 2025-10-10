@@ -182,10 +182,110 @@ Access the application at `http://localhost:5173`
 - Mobile-responsive design  
 
 ### Technical Infrastructure ✅
-- Scalable backend architecture  
-- Comprehensive database schema  
-- Authentication and authorization  
-- Error handling and logging  
+- Scalable backend architecture
+- Comprehensive database schema
+- Authentication and authorization
+- Error handling and logging
+
+## 🛡️ Admin Dashboard
+
+The admin dashboard provides comprehensive platform management capabilities for administrators.
+
+### Features
+
+#### User Management
+- **User Listing**: Search, filter, and paginate through all platform users
+- **User Profiles**: Detailed view of user accounts, subscriptions, and contracts
+- **Subscription Management**: Manually adjust user subscription tiers
+- **User Impersonation**: Generate temporary tokens to view platform as any user for debugging
+- **Search & Filters**: Find users by email/name, filter by subscription tier
+- **Audit Logging**: All admin actions are tracked with timestamps and details
+
+#### System Monitoring
+- **Dashboard Metrics**: Real-time statistics on users, contracts, and subscriptions
+- **Recent Activity**: Monitor recent contracts, signups, and payments
+- **Subscription Breakdown**: Visual representation of tier distribution
+- **Active Users**: Track platform engagement and usage patterns
+
+### Access
+
+The admin dashboard is accessible at `/admin` and requires admin privileges:
+
+```
+URL: http://localhost:5173/admin
+Access: Requires is_admin=true in users table
+```
+
+### Setup
+
+1. **Grant Admin Access** to a user:
+```sql
+UPDATE users SET is_admin = true WHERE email = 'admin@example.com';
+```
+
+2. **Access the Dashboard**:
+- Log in with admin credentials
+- Navigate to `/admin`
+- Dashboard automatically verifies admin status
+
+### Admin API Endpoints
+
+All endpoints require authentication and admin privileges:
+
+- `GET /api/admin/metrics/overview` - System-wide metrics
+- `GET /api/admin/metrics/recent-activity` - Recent platform activity
+- `GET /api/admin/users` - List all users with search/filter
+- `GET /api/admin/users/:userId` - Detailed user profile
+- `POST /api/admin/users/:userId/subscription` - Update subscription tier
+- `POST /api/admin/users/:userId/impersonate` - Generate impersonation token
+- `GET /api/admin/audit-log` - View admin action history
+
+### Features by Component
+
+#### UserList.jsx
+- Paginated user listing (50 users per page)
+- Real-time search by email or name
+- Filter by subscription tier (basic/pro/enterprise)
+- Sort by date, email (ascending/descending)
+- Click any row to view user details
+
+#### UserDetail.jsx
+- Complete user profile with subscription details
+- Tabbed interface for contracts, payments, and admin actions
+- Edit subscription tier with audit logging
+- Generate impersonation tokens for debugging
+- View payment history and contract list
+
+#### SubscriptionEditor.jsx
+- Change user subscription tiers (basic/pro/enterprise)
+- Optional reason field for audit trail
+- Stripe sync option for payment integration
+- Confirmation dialogs for destructive actions
+
+#### UserImpersonation.jsx
+- Generate 1-hour temporary access tokens
+- Automatic admin token preservation
+- Security warnings and audit logging
+- Cannot impersonate other admin users
+
+### Security Features
+
+- **Admin-Only Routes**: All admin endpoints protected by middleware
+- **Audit Logging**: Every admin action logged to `admin_actions` table
+- **Confirmation Dialogs**: Required for destructive actions
+- **Impersonation Limits**: Cannot impersonate admin users, 1-hour token expiry
+- **Access Control**: Frontend automatically redirects non-admins
+
+### Testing
+
+Run the admin integration tests:
+
+```bash
+cd backend
+node tests/admin-integration-test.js
+```
+
+This tests all admin workflows including authentication, user management, subscription changes, impersonation, and audit logging.
 
 ## 📊 Growth Roadmap
 
