@@ -126,12 +126,6 @@ router.post('/chat/message', asyncHandler(async (req, res) => {
     });
   }
 
-  // Update conversation state
-  await pool.query(
-    'UPDATE chat_sessions SET conversation_state = $1, updated_at = NOW() WHERE id = $2',
-    [JSON.stringify(conversationState), sessionId]
-  );
-
   // Process message with AI if needed
   const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
 
@@ -152,10 +146,29 @@ Based on the conversation, extract any relevant contract parameters and provide 
 
 Respond in a conversational, professional tone. Ask follow-up questions to gather missing information.`;
 
+  // This part was missing. The AI was never called.
+  let aiResponse;
+  try {
+    const model = aiProvider.genAI.getGenerativeModel({ model: aiProvider.model });
+    const result = await model.generateContent(conversationalPrompt);
+    const text = await result.response.text();
+    // Assuming the AI returns a JSON object with the next state
+    aiResponse = JSON.parse(text); 
+  } catch (error) {
+    console.error("AI processing error in chat message:", error);
+    return res.status(500).json({ success: false, error: "Failed to process message with AI." });
+  }
+
+  // Update conversation state with AI response
+  await pool.query(
+    'UPDATE chat_sessions SET conversation_state = $1, updated_at = NOW() WHERE id = $2',
+    [JSON.stringify(aiResponse.updatedConversationState), sessionId]
+  );
+
   res.json({
     success: true,
     sessionId,
-    conversationState,
+    conversationState: aiResponse.updatedConversationState,
     timestamp: new Date().toISOString()
   });
 }));
@@ -165,7 +178,11 @@ router.get('/chat/recent', asyncHandler(async (req, res) => {
   const userId = req.user.userId;
 
   const result = await pool.query(
-    'SELECT id, contract_type, created_at, updated_at FROM chat_sessions WHERE user_id = $1 ORDER BY updated_at DESC LIMIT 10',
+    `SELECT id, contract_type, conversation_state, created_at, updated_at
+     FROM chat_sessions
+     WHERE user_id = $1
+     ORDER BY updated_at DESC
+     LIMIT 5`,
     [userId]
   );
 
@@ -458,23 +475,29 @@ ${JSON.stringify(aiAnalysis, null, 2)}
   });
 }));
 
-// Get user's recent chat sessions
-router.get('/chat/recent', asyncHandler(async (req, res) => {
-  const userId = req.user.userId;
+/**
+ * Direct AI interpretation function for internal use
+ * Avoids HTTP overhead by calling AI logic directly
+ *
+ * @param {string} userInput - Natural language input
+ * @param {object} context - Additional context (optional)
+ * @param {string} model - AI model to use (default: gemini-2.5-pro)
+ * @returns {Promise<object>} - AI-generated contract specification
+ */
+async function interpretWithAI(userInput, context = {}, model = 'gemini-2.5-pro') {
+  if (!userInput || typeof userInput !== 'string' || userInput.trim().length === 0) {
+    throw new Error('userInput is required and must be a non-empty string');
+  }
 
-  const result = await pool.query(
-    `SELECT id, contract_type, conversation_state, created_at, updated_at
-     FROM chat_sessions
-     WHERE user_id = $1
-     ORDER BY updated_at DESC
-     LIMIT 5`,
-    [userId]
-  );
+  const aiProvider = new GoogleAIProvider({ model });
+  const aiGeneratedSpec = await aiProvider.generateContractSpec(userInput, context);
 
-  res.json({
+  return {
     success: true,
-    sessions: result.rows
-  });
-}));
+    contractSpec: aiGeneratedSpec,
+    userInput: userInput,
+    provider: aiProvider.getProviderInfo()
+  };
+}
 
-module.exports = router;
+module.exports = { router, interpretWithAI };

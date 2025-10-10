@@ -198,12 +198,16 @@ router.post('/webhook/stripe', express.raw({type: 'application/json'}), asyncHan
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   let event;
-  if (webhookSecret) {
-    // Verify webhook signature for security
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not set. Aborting webhook processing.');
+    return res.status(500).json({ error: 'Webhook secret not configured.' });
+  }
+
+  try {
     event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } else {
-    // For development/testing without webhook secret
-    event = JSON.parse(req.body.toString());
+  } catch (err) {
+    console.log(`⚠️  Webhook signature verification failed.`, err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
   console.log('Stripe webhook event:', event.type);
