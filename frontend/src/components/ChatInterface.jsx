@@ -732,7 +732,7 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
     try {
       // Build conversation context
       const conversationContext = {
-        previousMessages: messages,
+        messages: messages,
         extractedParams: sessionData.extractedParams,
         contractType: 'employment_agreement',
         jurisdiction: sessionData.jurisdiction
@@ -1151,7 +1151,7 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
                         </p>
                         <div className="flex items-center justify-between mt-2">
                           <p className="text-xs opacity-70">
-                            {message.timestamp.toLocaleTimeString([], { 
+                            {new Date(message.timestamp).toLocaleTimeString([], { 
                               hour: '2-digit', 
                               minute: '2-digit' 
                             })}
@@ -1195,7 +1195,7 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
                           {message.content}
                         </p>
                         <p className="text-xs opacity-70 mt-1">
-                          {message.timestamp.toLocaleTimeString([], { 
+                          {new Date(message.timestamp).toLocaleTimeString([], { 
                             hour: '2-digit', 
                             minute: '2-digit' 
                           })}

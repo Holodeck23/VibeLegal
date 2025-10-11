@@ -1,17 +1,17 @@
 # VibeLegal Development Status
 
-## Current State (Oct 10, 2025)
+## Current State (October 2025)
 **MVP Status**: Production-Ready California Employment Contract System
-**Branch**: `admin-dashboard` (ready to merge to main)
+**Branch**: `main` (all features merged and synced)
 **Reality Check**: One contract type, one state, zero paying customers - BUT production infrastructure complete
-**Achievement**: Enterprise-grade admin dashboard, comprehensive analytics, payment processing, and legal compliance
+**Achievement**: Enterprise-grade admin dashboard, comprehensive analytics, payment processing, legal compliance, and security hardening
 **Potential Futures**:
 - SUCCESS: All contract types × all states × international expansion (UK, Canada, EU, AU)
 - FAILURE: Over-engineered California employment contract generator nobody wanted
 
-## Latest Completed Work (Oct 10, 2025)
+## Latest Completed Work
 
-### COMPLETED: Admin Dashboard with Data Visualization (branch: `admin-dashboard`)
+### Admin Dashboard with Data Visualization (Oct 2025) - **MERGED TO MAIN**
 - **Overview Dashboard**: MRR tracking, revenue by tier, growth metrics
 - **Interactive Charts**: Recharts integration for users, contracts, and revenue trends
 - **Revenue Analytics**: Monthly recurring revenue calculations and forecasting
@@ -20,16 +20,23 @@
 - **User Impersonation**: 1-hour temporary access tokens for debugging
 - **Recent Activity**: Real-time monitoring of contracts, signups, and payments
 - **Audit Logging**: Complete tracking of all admin actions
-- **STATUS**: Ready to merge to main
+- **STATUS**: Merged to main (PR #47, #48)
 
-### COMPLETED: Critical Bug Fixes (Oct 10, 2025)
+### Security Audit & Hardening (Oct 2025) - **MERGED TO MAIN**
+- **March 2025 Security Audit**: Comprehensive findings documented
+- **Subscription & Admin Flow Hardening**: Enhanced security controls
+- **Repository Cleanup**: Documentation consolidation
+- **Tailwind Dependencies**: Restored missing dependencies after cleanup
+- **STATUS**: Merged to main (PR #50, #51)
+
+### Critical Bug Fixes (Oct 2025) - **MERGED TO MAIN**
 **4 Critical Bugs Identified and Fixed:**
 1. **Duplicate aiProvider Declaration**: Fixed unintentional model override (ai-interpreter.js:130-131)
 2. **Duplicate conversationState Key**: Removed first occurrence, kept AI-updated state (ai-interpreter.js:172-173)
 3. **Duplicate /chat/recent Route**: Consolidated into single enhanced route with conversation_state (ai-interpreter.js:177 & 479)
 4. **Inefficient Internal API Calls**: Replaced HTTP fetch with direct function calls (server.js:247 & 290)
 - **Impact**: Improved performance, eliminated race conditions, reduced network overhead
-- **STATUS**: All bugs validated and fixed
+- **STATUS**: Merged to main
 
 ## Recent Completed Work (Historical)
 
@@ -113,14 +120,7 @@
 
 ## NEXT STEPS: PRODUCTION DEPLOYMENT
 
-### 1. Merge Admin Dashboard to Main
-```bash
-git checkout main
-git merge admin-dashboard
-git push origin main
-```
-
-### 2. Deploy to Production
+### 1. Deploy to Production
 **Backend Deployment** (Railway, Render, or similar):
 - Deploy from `main` branch
 - Set environment variables (DATABASE_URL, GOOGLE_AI_API_KEY, JWT_SECRET)
@@ -132,7 +132,7 @@ git push origin main
 - Set `VITE_API_BASE_URL` to production backend URL
 - Configure custom domain
 
-### 3. Post-Deployment Verification
+### 2. Post-Deployment Verification
 - Test payment flow end-to-end
 - Verify legal disclaimers display
 - Test admin dashboard access
@@ -140,7 +140,7 @@ git push origin main
 - Test contract generation
 - Verify MRR calculations
 
-### 4. Market Validation Strategy
+### 3. Market Validation Strategy
 
 **Week 1-2: Launch & Initial Testing**
 - Deploy professional platform with payment processing
@@ -211,14 +211,16 @@ git push origin main
 - **Backend**: `cd backend && node server.js`
 - **Frontend**: `cd frontend && npm run dev`
 - **Database**: PostgreSQL `vibelegal` database
-- **Admin Tests**: `cd backend && node tests/admin-integration-test.js`
+- **Admin Tests**: `cd backend && node --input-type=module tests/admin-integration-test.js`
+  - Note: Test uses top-level await, requires ESM mode
+  - Requires running backend server and seeded test data
 
 ## Git Workflow
 - Feature branches for each enhancement
 - Detailed commit messages with legal context
-- **Current Branch**: `admin-dashboard` (ready to merge)
-- **Latest Work**: Admin dashboard + data visualization + 4 bug fixes (Oct 10, 2025)
-- **Status**: Production-ready, all deployment blockers resolved
+- **Current Branch**: `main` (all features merged)
+- **Latest Work**: Admin dashboard, security hardening, bug fixes (Oct 2025)
+- **Status**: Production-ready, all features merged to main
 
 ## Test User
 - **Email**: test2@vibelegal.com
@@ -305,15 +307,15 @@ git push origin main
 
 ## Recent Fixes & Improvements
 
-### October 10, 2025
+### October 2025
 - Admin dashboard with data visualization (Recharts)
 - MRR tracking and revenue analytics
 - Growth rate calculations (users, contracts, revenue)
 - User impersonation for debugging
 - Enhanced audit logging
 - Fixed 4 critical code quality bugs
-
-### October 8, 2025
+- Security audit findings documented and hardened
+- Repository cleanup and documentation consolidation
 - Joi-based environment validation
 - Centralized asyncHandler middleware
 - Removed 133 lines of redundant code
@@ -330,6 +332,6 @@ git push origin main
 
 ---
 
-**Current Status**: Production-ready on `admin-dashboard` branch
-**Next Action**: Merge to main and deploy to production
-**Last Updated**: October 10, 2025
+**Current Status**: Production-ready on `main` branch (all features merged)
+**Next Action**: Deploy to production
+**Last Updated**: October 2025

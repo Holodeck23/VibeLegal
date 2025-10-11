@@ -108,6 +108,160 @@ router.post('/chat/start', asyncHandler(async (req, res) => {
   });
 }));
 
+/**
+ * Performs an intelligent analysis of a single turn in a conversation.
+ * This function contains the core "brain" of the conversational AI.
+ * @param {string} userInput - The user's latest message.
+ * @param {object} conversationContext - The current state of the conversation.
+ * @param {object} aiProvider - An instance of an AI provider.
+ * @returns {Promise<object>} - A structured JSON object with the AI's analysis.
+ */
+async function analyzeConversationTurn(userInput, conversationContext, aiProvider) {
+  // Check for EXPLICIT force generation keywords
+  const forceGenerationKeywords = [
+    'generate contract', 'generate the contract', 'generate contract now',
+    'create contract', 'create the contract', 'create contract now',
+    'generate it now', 'create it now', 'ready to generate'
+  ];
+  const shouldForceGenerate = forceGenerationKeywords.some(keyword =>
+    userInput.toLowerCase().includes(keyword.toLowerCase())
+  );
+
+  // Count conversation turns to prevent endless loops
+  const messages = conversationContext.messages || [];
+  const conversationTurns = Math.floor(messages.length / 2);
+  const maxTurns = 12;
+  const shouldAutoGenerate = conversationTurns >= maxTurns;
+
+  // Build the intelligent analysis prompt
+  const analysisPrompt = `You are an expert employment law attorney and legal AI assistant specializing in comprehensive, employer-protective employment contracts. Your role is to guide users through creating strategic, compliant employment contracts by:
+
+1. **Strategic Analysis**: Analyze what they've provided vs. critical employer protections missing
+2. **Risk Assessment**: Identify potential legal risks, compliance issues, and vulnerabilities  
+3. **Protective Measures**: Suggest specific clauses for IP protection, non-compete, confidentiality, severance terms
+4. **Compliance Assurance**: Ensure California employment law compliance and best practices
+5. **Comprehensive Coverage**: Don't just collect basics - ensure strategic employer protections
+
+**STRATEGIC EMPLOYER PROTECTIONS TO IDENTIFY:**
+- IP assignment and invention clauses
+- Non-compete and non-solicitation terms (where legally enforceable)
+- Confidentiality and trade secret protection
+- Termination procedures and severance terms
+- Performance review processes and probation periods
+- PTO payout policies and accrual rules
+- Remote work security and equipment policies
+- Expense reimbursement timelines and procedures
+- Equity vesting schedules and treatment upon termination
+- Background check and reference requirements
+- Dispute resolution and arbitration clauses
+
+**CRITICAL INSTRUCTIONS - READ CAREFULLY:**
+- **NEVER** set readyToGenerate to true unless the user's EXACT words include "generate contract", "create contract", "generate the contract", or "create the contract"
+- Phrases like "let's proceed", "move forward", "let's start", "continue" DO NOT mean generate - they mean continue the conversation
+- Even if user provides comprehensive details in one message, DO NOT generate - always ask clarifying questions first
+- Continue conversational guidance for at least 3-4 exchanges to gather details and confirm requirements
+- Ask follow-up questions about: compensation details, benefits, work arrangement, termination terms, and legal protections
+- Focus on strategic elements and suggest protective clauses they might not have considered
+- Always confirm final details before suggesting generation
+- The ONLY way to generate is if user explicitly says one of the exact trigger phrases above
+
+**Current conversation context:**
+${JSON.stringify(conversationContext, null, 2)}
+
+**User's latest input:** "${userInput}"
+**Force generation requested:** ${shouldForceGenerate}
+**Conversation turns:** ${conversationTurns}/${maxTurns}
+**Should auto-generate:** ${shouldAutoGenerate}
+
+**Your task:** As a strategic employment law expert, analyze this input and respond with a JSON object containing:
+
+RESPOND ONLY WITH VALID JSON:
+{
+  "nextQuestion": "Your strategic legal guidance or intelligent follow-up question (or generation confirmation)",
+  "extractedInfo": {"key": "value"},
+  "analysis": "Your legal analysis of what they've provided, strategic gaps, and employer protection needs",
+  "suggestions": ["Strategic legal suggestion 1 with rationale", "Employer protection suggestion 2"],
+  "missingInfo": ["Critical missing element 1", "Strategic protection gap 2"],
+  "riskAssessment": "Detailed legal risk analysis including compliance and strategic vulnerabilities",
+  "recommendedClauses": ["ip_assignment", "confidentiality_2_years", "performance_reviews", "severance_standard"],
+  "recommendedRiskLevel": "conservative|moderate|aggressive",
+  "recommendedStance": "pro_employee|neutral|pro_employer",
+  "strategicProtections": ["Specific employer protection 1", "Legal safeguard 2"],
+  "complianceNotes": ["CA law requirement 1", "Employment standard 2"],
+  "readyToGenerate": false,
+  "contractParams": {},
+  "suggestedClauses": ["Specific clause recommendations based on role and situation"],
+  "progressIndicator": "${shouldForceGenerate || shouldAutoGenerate ? '100' : Math.min(90, Math.round(15 + (conversationTurns / maxTurns) * 75))}% complete"
+}
+
+${shouldForceGenerate || shouldAutoGenerate ? `**GENERATION TRIGGERED - SET readyToGenerate to true and extract all contractParams from the full conversation context.**
+
+EXTRACT THESE PARAMETERS FROM THE CONVERSATION CONTEXT:
+${JSON.stringify(conversationContext, null, 2)}
+
+Look for and EXTRACT using Master Input Brief patterns:
+- CORE DETAILS: Company/employer name, client details, employee name, job title, start date, work arrangement, location, reports to.
+- COMPENSATION: Annual salary, hourly rate, pay frequency, bonus structure, equity compensation, vesting schedule.
+- BENEFITS: Health/dental/vision insurance, retirement benefits (401k), PTO policy, sick leave.
+- EMPLOYMENT TERMS: Probation period, performance reviews, notice period, severance policy.
+- LEGAL PROTECTIONS: Confidentiality, IP assignment, non-compete, non-solicitation, expense reimbursement.
+- JURISDICTION: Governing law (default to California).
+
+Update the "contractParams" object in your JSON response with all extracted values.
+` : ''}
+
+Focus on being an intelligent legal consultant, not a form-filler. Ask smart questions about gaps, suggest protective clauses they might not have considered, and ensure legal compliance.`;
+
+  const model = aiProvider.genAI.getGenerativeModel({ model: aiProvider.model });
+  const aiResult = await model.generateContent(analysisPrompt);
+  const aiText = await aiResult.response.text();
+
+  try {
+    const cleanText = aiText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    let aiResponse = JSON.parse(cleanText);
+
+    // DETERMINISTIC OVERRIDE - don't trust LLM when user explicitly requested generation
+    if (shouldForceGenerate || shouldAutoGenerate) {
+      console.log('Force generation triggered - overriding LLM response');
+      aiResponse.readyToGenerate = true;
+      aiResponse.progressIndicator = '100% complete';
+
+      // Ensure we have params (extract from conversation if LLM didn't)
+      if (!aiResponse.contractParams || Object.keys(aiResponse.contractParams).length === 0) {
+        console.log('Extracting params from conversation context');
+        const messages = conversationContext.messages || conversationContext.previousMessages || [];
+        // Basic extraction - merge with any AI-extracted info
+        aiResponse.contractParams = {
+          ...(aiResponse.extractedInfo || {}),
+          'Governing Law': 'California',
+          'Jurisdiction': 'California',
+          'Contract Type': 'Employment Agreement'
+        };
+      }
+
+      // Single consolidated message about missing items (not 6 separate questions)
+      if (aiResponse.missingInfo && aiResponse.missingInfo.length > 0) {
+        aiResponse.nextQuestion = `I'll generate your contract now with the information provided. Note: These optional clauses weren't discussed (you can add them later if needed): ${aiResponse.missingInfo.slice(0, 5).join(', ')}${aiResponse.missingInfo.length > 5 ? '...' : ''}. Generating contract...`;
+      } else {
+        aiResponse.nextQuestion = "Perfect! Generating your professional employment contract now...";
+      }
+    }
+
+    return aiResponse;
+  } catch (parseError) {
+    console.error('Failed to parse AI response in analyzeConversationTurn:', aiText, parseError);
+    // Return a structured fallback response
+    return {
+      nextQuestion: "I'm having a little trouble processing that. Could you please rephrase or provide more details about the contract you'd like to create?",
+      analysis: "AI parsing error. Unable to analyze input.",
+      suggestions: [],
+      missingInfo: ["All contract details"],
+      readyToGenerate: false,
+      progressIndicator: conversationContext.progressIndicator || "0% complete"
+    };
+  }
+}
+
 // Send message to chat session
 router.post('/chat/message', asyncHandler(async (req, res) => {
   const { sessionId, message, conversationState } = req.body;
@@ -126,49 +280,65 @@ router.post('/chat/message', asyncHandler(async (req, res) => {
     });
   }
 
+  // ✅ NEW: Handle state-only saves (no AI processing for auto-save)
+  if (!message || message.trim() === '') {
+    console.log('State-only save (no message) - skipping AI processing');
+    await pool.query(
+      'UPDATE chat_sessions SET conversation_state = $1, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(conversationState), sessionId]
+    );
+
+    return res.json({
+      success: true,
+      sessionId,
+      conversationState: conversationState,
+      timestamp: new Date().toISOString(),
+      saveOnly: true
+    });
+  }
+
+  // Add user message to conversation state before sending to AI
+  const updatedStateWithUserMessage = {
+    ...conversationState,
+    messages: [
+      ...(conversationState.messages || []),
+      { id: Date.now(), type: 'user', content: message, timestamp: new Date().toISOString() }
+    ]
+  };
+
+  // Use the unified, intelligent analysis for every message
   // Process message with AI if needed
   const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
+  const aiAnalysis = await analyzeConversationTurn(message, updatedStateWithUserMessage, aiProvider);
 
-  // Enhanced conversational prompt for natural contract parameter extraction
-  const conversationalPrompt = `You are an AI legal assistant helping extract contract parameters through natural conversation.
-
-Current conversation state: ${JSON.stringify(conversationState)}
-User message: "${message}"
-
-Based on the conversation, extract any relevant contract parameters and provide a natural, helpful response to continue the conversation. Focus on gathering:
-- Company/client name
-- Employee name
-- Job title and duties
-- Compensation details
-- Benefits
-- Work arrangement (remote/hybrid/onsite)
-- Specific contract requirements
-
-Respond in a conversational, professional tone. Ask follow-up questions to gather missing information.`;
-
-  // This part was missing. The AI was never called.
-  let aiResponse;
-  try {
-    const model = aiProvider.genAI.getGenerativeModel({ model: aiProvider.model });
-    const result = await model.generateContent(conversationalPrompt);
-    const text = await result.response.text();
-    // Assuming the AI returns a JSON object with the next state
-    aiResponse = JSON.parse(text); 
-  } catch (error) {
-    console.error("AI processing error in chat message:", error);
-    return res.status(500).json({ success: false, error: "Failed to process message with AI." });
-  }
+  // Construct the final conversation state to be saved
+  const finalConversationState = {
+    ...updatedStateWithUserMessage, // Start with the state that includes the user's message
+    // Merge newly extracted params with existing ones
+    extractedParams: {
+      ...updatedStateWithUserMessage.extractedParams,
+      ...aiAnalysis.extractedInfo,
+      ...aiAnalysis.contractParams, // Ensure final params are included if generation is ready
+    },
+    // Add the AI's response to the message history
+    messages: [
+      ...updatedStateWithUserMessage.messages,
+      { id: Date.now() + 1, type: 'bot', content: aiAnalysis.nextQuestion, timestamp: new Date().toISOString() }
+    ],
+    // Carry over the rest of the analysis for the frontend to use
+    ...aiAnalysis
+  };
 
   // Update conversation state with AI response
   await pool.query(
     'UPDATE chat_sessions SET conversation_state = $1, updated_at = NOW() WHERE id = $2',
-    [JSON.stringify(aiResponse.updatedConversationState), sessionId]
+    [JSON.stringify(finalConversationState), sessionId]
   );
 
   res.json({
     success: true,
     sessionId,
-    conversationState: aiResponse.updatedConversationState,
+    conversationState: finalConversationState,
     timestamp: new Date().toISOString()
   });
 }));
@@ -227,200 +397,13 @@ router.post('/analyze-contract-requirements', asyncHandler(async (req, res) => {
   const { userInput, conversationContext, analysisType } = req.body;
   const userId = req.user.userId;
 
+  // This endpoint now acts as a wrapper around the core analysis function
   const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
-
-  // Check for EXPLICIT force generation keywords only (more strict)
-    const forceGenerationKeywords = [
-      'generate contract', 'generate the contract', 'generate contract now',
-      'create contract', 'create the contract', 'create contract now',
-      'generate it now', 'create it now', 'ready to generate'
-    ];
-
-    const shouldForceGenerate = forceGenerationKeywords.some(keyword =>
-      userInput.toLowerCase().includes(keyword.toLowerCase())
-    );
-
-    // Count conversation turns to prevent endless loops
-    const messages = conversationContext.messages || [];
-    const conversationTurns = Math.floor(messages.length / 2); // Divide by 2 for user/bot pairs
-    const maxTurns = 12; // Increased to 12 back-and-forth exchanges for more conversation
-    const shouldAutoGenerate = conversationTurns >= maxTurns;
-
-    // Build intelligent analysis prompt with strategic employer protections focus
-    const analysisPrompt = `You are an expert employment law attorney and legal AI assistant specializing in comprehensive, employer-protective employment contracts. Your role is to guide users through creating strategic, compliant employment contracts by:
-
-1. **Strategic Analysis**: Analyze what they've provided vs. critical employer protections missing
-2. **Risk Assessment**: Identify potential legal risks, compliance issues, and vulnerabilities  
-3. **Protective Measures**: Suggest specific clauses for IP protection, non-compete, confidentiality, severance terms
-4. **Compliance Assurance**: Ensure California employment law compliance and best practices
-5. **Comprehensive Coverage**: Don't just collect basics - ensure strategic employer protections
-
-**STRATEGIC EMPLOYER PROTECTIONS TO IDENTIFY:**
-- IP assignment and invention clauses
-- Non-compete and non-solicitation terms (where legally enforceable)
-- Confidentiality and trade secret protection
-- Termination procedures and severance terms
-- Performance review processes and probation periods
-- PTO payout policies and accrual rules
-- Remote work security and equipment policies
-- Expense reimbursement timelines and procedures
-- Equity vesting schedules and treatment upon termination
-- Background check and reference requirements
-- Dispute resolution and arbitration clauses
-
-**CRITICAL INSTRUCTIONS - READ CAREFULLY:**
-- **NEVER** set readyToGenerate to true unless the user's EXACT words include "generate contract", "create contract", "generate the contract", or "create the contract"
-- Phrases like "let's proceed", "move forward", "let's start", "continue" DO NOT mean generate - they mean continue the conversation
-- Even if user provides comprehensive details in one message, DO NOT generate - always ask clarifying questions first
-- Continue conversational guidance for at least 3-4 exchanges to gather details and confirm requirements
-- Ask follow-up questions about: compensation details, benefits, work arrangement, termination terms, and legal protections
-- Focus on strategic elements and suggest protective clauses they might not have considered
-- Always confirm final details before suggesting generation
-- The ONLY way to generate is if user explicitly says one of the exact trigger phrases above
-
-**Current conversation context:**
-${JSON.stringify(conversationContext, null, 2)}
-
-**User's latest input:** "${userInput}"
-**Force generation requested:** ${shouldForceGenerate}
-**Conversation turns:** ${conversationTurns}/${maxTurns}
-**Should auto-generate:** ${shouldAutoGenerate}
-
-**Your task:** As a strategic employment law expert, analyze this input and respond with a JSON object containing:
-
-RESPOND ONLY WITH VALID JSON:
-{
-  "nextQuestion": "Your strategic legal guidance or intelligent follow-up question (or generation confirmation)",
-  "extractedInfo": {"key": "value"}, // Any contract parameters you can extract using comprehensive patterns
-  "analysis": "Your legal analysis of what they've provided, strategic gaps, and employer protection needs",
-  "suggestions": ["Strategic legal suggestion 1 with rationale", "Employer protection suggestion 2"],
-  "missingInfo": ["Critical missing element 1", "Strategic protection gap 2"],
-  "riskAssessment": "Detailed legal risk analysis including compliance and strategic vulnerabilities",
-  "recommendedClauses": ["ip_assignment", "confidentiality_2_years", "performance_reviews", "severance_standard"],
-  "recommendedRiskLevel": "conservative|moderate|aggressive",
-  "recommendedStance": "pro_employee|neutral|pro_employer",
-  "strategicProtections": ["Specific employer protection 1", "Legal safeguard 2"],
-  "complianceNotes": ["CA law requirement 1", "Employment standard 2"],
-  "readyToGenerate": false, // MUST be false unless user EXPLICITLY said "generate contract" or "create contract" - set to true ONLY if shouldForceGenerate is true
-  "contractParams": {
-    // When readyToGenerate is true, extract ALL available parameters from the conversation using the comprehensive Master Input Brief framework:
-    // CORE DETAILS:
-    // "Company Name": "extracted company name",
-    // "Client Name": "extracted company name (same as Company Name)",
-    // "Employee Name": "extracted employee name", 
-    // "Other Party Name": "extracted employee name (same as Employee Name)",
-    // "Job Title": "extracted job title/position",
-    // "Annual Salary": "$XX,XXX extracted salary amount",
-    // "Salary Amount": "numeric salary without $",
-    // "Hourly Rate": "$XX/hour if applicable",
-    // "Employment Type": "Full-time|Part-time|Contract",
-    // "Work Hours": "XX hours per week",
-    // "Start Date": "extracted start date",
-    // "Work Arrangement": "Remote|Hybrid|On-site details",
-    // "Work Location": "specific location or remote arrangement",
-    // "Reports To": "manager/supervisor name or title",
-    // 
-    // BENEFITS & COMPENSATION:
-    // "Health Insurance": "coverage details",
-    // "Dental Insurance": "dental coverage if mentioned",
-    // "Vision Insurance": "vision coverage if mentioned",
-    // "Retirement Benefits": "401k details with match %",
-    // "PTO Policy": "XX days/weeks paid time off",
-    // "Annual PTO Days": "numeric PTO amount",
-    // "Sick Leave": "sick leave policy",
-    // "Bonus Structure": "bonus details and %",
-    // "Equity Compensation": "stock options, shares, equity %",
-    // "Vesting Schedule": "equity vesting details",
-    // 
-    // EMPLOYMENT TERMS:
-    // "Probation Period": "XX days/months probationary period",
-    // "Probationary Period Length": "XX days/months",
-    // "Performance Reviews": "review schedule and process",
-    // "Notice Period": "termination notice requirements",
-    // "Severance Policy": "severance terms and duration",
-    // 
-    // LEGAL PROTECTIONS:
-    // "Confidentiality": "confidentiality requirements",
-    // "Confidentiality Duration": "duration of confidentiality post-termination",
-    // "IP Assignment": "intellectual property assignment details",
-    // "Non-Compete Period": "non-compete duration and scope",
-    // "Non-Compete": "non-compete restrictions",
-    // "Non-Solicitation Period": "non-solicitation duration",
-    // "Non-Solicitation": "non-solicitation restrictions",
-    // "Expense Reimbursement": "expense reimbursement policy and timeline",
-    // 
-    // JURISDICTION:
-    // "Governing Law": "California (default) or specified jurisdiction",
-    // "Jurisdiction": "legal jurisdiction for the contract"
-  }, // Include all available parameters if readyToGenerate is true
-  "suggestedClauses": ["Specific clause recommendations based on role and situation"],
-  "progressIndicator": "${shouldForceGenerate || shouldAutoGenerate ? '100' : Math.min(90, Math.round(15 + (conversationTurns / maxTurns) * 75))}% complete"
-}
-
-${shouldForceGenerate ? `**USER REQUESTED GENERATION - SET readyToGenerate to true and extract contractParams from conversation context**
-
-EXTRACT THESE PARAMETERS FROM THE CONVERSATION CONTEXT:
-${JSON.stringify(conversationContext, null, 2)}
-
-Look for and EXTRACT using Master Input Brief patterns:
-- Company/employer name and client details
-- Employee name and personal information  
-- Job title/position and reporting structure
-- Salary/compensation amount (annual, hourly, bonus)
-- Work location and arrangement (remote/office/hybrid)
-- Benefits mentioned (health, dental, vision, 401k, PTO, sick leave)
-- Employment terms (start date, probation, performance reviews)
-- Equity and stock options (shares, vesting schedule)
-- Legal protections (IP, confidentiality, non-compete, non-solicitation)
-- Termination terms (notice period, severance policy)
-- Expense reimbursement and work policies
-- Strategic employer protections discussed
-- Any other contract details, clauses, or requirements mentioned
-
-Use comprehensive pattern matching to extract maximum detail.
-` : ''}
-${shouldAutoGenerate ? `**MAX TURNS REACHED - SET readyToGenerate to true and extract contractParams from conversation**
-
-EXTRACT COMPREHENSIVE PARAMETERS using Master Input Brief framework from CONVERSATION: 
-${JSON.stringify(conversationContext, null, 2)}
-
-Apply strategic legal analysis to identify:
-1. All basic employment terms
-2. Compensation and benefits details  
-3. Strategic employer protection gaps
-4. California employment law compliance needs
-5. Risk mitigation clauses required
-6. Professional development and review processes
-7. Termination and post-employment restrictions
-` : ''}
-
-Focus on being an intelligent legal consultant, not a form-filler. Ask smart questions about gaps, suggest protective clauses they might not have considered, and ensure legal compliance.`;
-
-    // Get AI analysis using direct model access
-    const model = aiProvider.genAI.getGenerativeModel({ model: aiProvider.model });
-    const aiResult = await model.generateContent(analysisPrompt);
-    const aiText = await aiResult.response.text();
-    
-    // Parse the AI response
-    let aiResponse;
-    try {
-      const cleanText = aiText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      aiResponse = JSON.parse(cleanText);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', aiText);
-      // Fallback response
-      aiResponse = {
-        nextQuestion: "I'd be happy to help you create a professional employment contract. Could you tell me more about the position you're hiring for - including job title, compensation, and any specific requirements?",
-        analysis: "Initial contract requirements needed",
-        suggestions: [],
-        missingInfo: ["Job title", "Compensation details", "Work arrangement"],
-        readyToGenerate: false
-      };
-    }
+  const aiAnalysis = await analyzeConversationTurn(userInput, conversationContext, aiProvider);
 
   res.json({
     success: true,
-    ...aiResponse
+    ...aiAnalysis
   });
 }));
 
