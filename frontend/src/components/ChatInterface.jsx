@@ -820,7 +820,7 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
   };
 
   // Copy message to clipboard
-  const copyToClipboard = async (text, event = null) => {
+  const copyToClipboard = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
       console.log('Copied to clipboard:', text.substring(0, 50) + '...');
@@ -830,6 +830,8 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
       try {
         const textArea = document.createElement('textarea');
         textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');

@@ -147,14 +147,15 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="chat" className="mt-6">
+            {/* Keep ChatInterface always mounted to preserve state */}
+            <div className={`mt-6 ${activeTab === 'chat' ? '' : 'hidden'}`}>
               <ChatInterface
                 onContractGenerate={handleChatContractGenerate}
                 isLoading={isLoading}
                 resumeData={resumeData}
                 onConversationUpdate={handleConversationUpdate}
               />
-            </TabsContent>
+            </div>
 
 
             <TabsContent value="history" className="mt-6">
