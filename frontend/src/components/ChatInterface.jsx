@@ -112,42 +112,56 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
         if (resumeData) {
           console.log('Resuming conversation from resumeData:', resumeData);
 
-          // Restore conversation state from resumeData
-          if (resumeData.messages) {
+          // Check if resumeData actually has conversation data
+          const hasMessages = resumeData.messages && resumeData.messages.length > 1; // More than just the initial bot message
+
+          if (hasMessages) {
+            // Restore full conversation state from resumeData
             setMessages(resumeData.messages);
-          }
-          if (resumeData.extractedParams) {
-            setSessionData(prev => ({
-              ...prev,
-              extractedParams: resumeData.extractedParams
-            }));
-          }
-          if (resumeData.conversationSummary) {
-            // Can use this for additional context if needed
-            console.log('Conversation summary available');
-          }
 
-          // Try to find the session ID from the most recent session since we don't have it in resumeData
-          const token = localStorage.getItem('token');
-          const response = await fetch('/api/ai/chat/recent', {
-            headers: {
-              'Authorization': `Bearer ${token}`
+            if (resumeData.extractedParams) {
+              setSessionData(prev => ({
+                ...prev,
+                extractedParams: resumeData.extractedParams
+              }));
             }
-          });
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data.sessions && data.sessions.length > 0) {
-              setCurrentSessionId(data.sessions[0].id);
+            // Restore progress and generation state
+            if (resumeData.progressIndicator) {
+              setProgressIndicator(resumeData.progressIndicator);
+            } else {
+              setProgressIndicator('60% complete'); // Default if not provided
             }
+
+            if (resumeData.canForceGenerate !== undefined) {
+              setCanForceGenerate(resumeData.canForceGenerate);
+            } else {
+              setCanForceGenerate(true); // Enable generation since we're resuming
+            }
+
+            // Try to find the session ID from the most recent session
+            const token = localStorage.getItem('token');
+            const response = await fetch('/api/ai/chat/recent', {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.sessions && data.sessions.length > 0) {
+                setCurrentSessionId(data.sessions[0].id);
+              }
+            }
+
+            console.log('Successfully resumed conversation from contract result page with', resumeData.messages.length, 'messages');
+            setHasLoadedSession(true);
+            return;
+          } else {
+            // resumeData exists but has no actual conversation - treat as fresh start
+            console.log('resumeData provided but no conversation history found - starting fresh');
+            // Fall through to load most recent session
           }
-
-          setProgressIndicator('60% complete'); // Resuming a conversation means we're already partway through
-          setCanForceGenerate(true); // Enable generation since we're resuming
-
-          console.log('Successfully resumed conversation from contract result page');
-          setHasLoadedSession(true);
-          return;
         }
 
         // Otherwise, load most recent session as before
@@ -747,8 +761,8 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
       // If AI suggests contract is ready to generate
       if (aiResponse.readyToGenerate && aiResponse.contractParams) {
         addMessage('bot', "Perfect! I have all the information needed to create your professional employment contract. Let me generate it now with all the details we've discussed, including the specific clauses and protections we identified.");
-        
-        // Generate contract with AI-extracted parameters
+
+        // Generate contract with AI-extracted parameters and FULL conversation history
         const contractParams = {
           contractType: "employment_agreement",
           parameters: aiResponse.contractParams,
@@ -756,7 +770,12 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
             risk_tolerance: aiResponse.recommendedRiskLevel || 'moderate',
             legal_stance: aiResponse.recommendedStance || 'neutral'
           },
-          conversationalData: updatedSessionData,
+          conversationalData: {
+            ...updatedSessionData,
+            messages: messages, // Include full message history for resume functionality
+            progressIndicator: progressIndicator,
+            canForceGenerate: canForceGenerate
+          },
           aiAnalysis: aiResponse.analysis,
           suggestedClauses: aiResponse.suggestedClauses,
           generationMethod: "conversational_ai" // Mark as AI chat generated
@@ -899,7 +918,7 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
 
       if (aiResponse.readyToGenerate && aiResponse.contractParams) {
         addMessage('bot', "Perfect! I'll generate your employment contract now with all the information we've gathered.");
-        
+
         const contractParams = {
           contractType: "employment_agreement",
           parameters: aiResponse.contractParams,
@@ -907,9 +926,15 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
             risk_tolerance: aiResponse.recommendedRiskLevel || 'moderate',
             legal_stance: aiResponse.recommendedStance || 'neutral'
           },
-          conversationalData: sessionData,
+          conversationalData: {
+            ...sessionData,
+            messages: messages, // Include full message history
+            progressIndicator: progressIndicator,
+            canForceGenerate: canForceGenerate
+          },
           aiAnalysis: aiResponse.analysis,
-          suggestedClauses: aiResponse.suggestedClauses
+          suggestedClauses: aiResponse.suggestedClauses,
+          generationMethod: "conversational_ai"
         };
 
         onContractGenerate(contractParams);
@@ -931,7 +956,10 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
           conversationalData: {
             ...sessionData,
             extractedParams: extractedParams,
-            conversationSummary: conversationText
+            conversationSummary: conversationText,
+            messages: messages, // Include full message history
+            progressIndicator: progressIndicator,
+            canForceGenerate: canForceGenerate
           },
           aiAnalysis: "Force generated by user request",
           suggestedClauses: [],
@@ -963,7 +991,10 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
         conversationalData: {
           ...sessionData,
           conversationSummary: conversationText,
-          extractedParams: fallbackParams
+          extractedParams: fallbackParams,
+          messages: messages, // Include full message history
+          progressIndicator: progressIndicator,
+          canForceGenerate: canForceGenerate
         },
         generationMethod: "conversational_ai"
       };

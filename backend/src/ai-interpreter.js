@@ -268,14 +268,15 @@ router.post('/analyze-contract-requirements', asyncHandler(async (req, res) => {
 - Background check and reference requirements
 - Dispute resolution and arbitration clauses
 
-**CRITICAL INSTRUCTIONS:**
-- ONLY set readyToGenerate to true if user EXPLICITLY says "generate contract" or "create contract" with clear intent
-- Continue conversational guidance even after 6+ exchanges unless user explicitly requests generation
-- Gather comprehensive contract details through natural conversation
-- Focus on strategic elements, not just basics - ask about protections they might not consider
-- Suggest protective clauses they haven't mentioned
-- Always consider California employment law requirements
-- Do NOT generate prematurely - ensure user has provided sufficient employment details first
+**CRITICAL INSTRUCTIONS - READ CAREFULLY:**
+- **NEVER** set readyToGenerate to true unless the user's EXACT words include "generate contract", "create contract", "generate the contract", or "create the contract"
+- Phrases like "let's proceed", "move forward", "let's start", "continue" DO NOT mean generate - they mean continue the conversation
+- Even if user provides comprehensive details in one message, DO NOT generate - always ask clarifying questions first
+- Continue conversational guidance for at least 3-4 exchanges to gather details and confirm requirements
+- Ask follow-up questions about: compensation details, benefits, work arrangement, termination terms, and legal protections
+- Focus on strategic elements and suggest protective clauses they might not have considered
+- Always confirm final details before suggesting generation
+- The ONLY way to generate is if user explicitly says one of the exact trigger phrases above
 
 **Current conversation context:**
 ${JSON.stringify(conversationContext, null, 2)}
@@ -292,15 +293,15 @@ RESPOND ONLY WITH VALID JSON:
   "nextQuestion": "Your strategic legal guidance or intelligent follow-up question (or generation confirmation)",
   "extractedInfo": {"key": "value"}, // Any contract parameters you can extract using comprehensive patterns
   "analysis": "Your legal analysis of what they've provided, strategic gaps, and employer protection needs",
-  "suggestions": ["Strategic legal suggestion 1 with rationale", "Employer protection suggestion 2"], 
+  "suggestions": ["Strategic legal suggestion 1 with rationale", "Employer protection suggestion 2"],
   "missingInfo": ["Critical missing element 1", "Strategic protection gap 2"],
   "riskAssessment": "Detailed legal risk analysis including compliance and strategic vulnerabilities",
   "recommendedClauses": ["ip_assignment", "confidentiality_2_years", "performance_reviews", "severance_standard"],
-  "recommendedRiskLevel": "conservative|moderate|aggressive", 
+  "recommendedRiskLevel": "conservative|moderate|aggressive",
   "recommendedStance": "pro_employee|neutral|pro_employer",
   "strategicProtections": ["Specific employer protection 1", "Legal safeguard 2"],
   "complianceNotes": ["CA law requirement 1", "Employment standard 2"],
-  "readyToGenerate": ${shouldForceGenerate || shouldAutoGenerate}, // Force true if user requested or max turns reached
+  "readyToGenerate": false, // MUST be false unless user EXPLICITLY said "generate contract" or "create contract" - set to true ONLY if shouldForceGenerate is true
   "contractParams": {
     // When readyToGenerate is true, extract ALL available parameters from the conversation using the comprehensive Master Input Brief framework:
     // CORE DETAILS:
