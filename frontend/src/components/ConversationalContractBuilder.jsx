@@ -19,7 +19,7 @@ import {
   Info
 } from 'lucide-react';
 
-export function ConversationalContractBuilder({ onContractGenerate, isLoading }) {
+export function ConversationalContractBuilder({ onContractGenerate, isLoading, resumeData }) {
   const [activeTab, setActiveTab] = useState('chat');
   const [contractData, setContractData] = useState(null);
   const [showUpgradeFlow, setShowUpgradeFlow] = useState(false);
@@ -82,9 +82,10 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
               requiredTier="pro"
               onUpgrade={() => setShowUpgradeFlow(true)}
             >
-              <ChatInterface 
+              <ChatInterface
                 onContractGenerate={handleChatContractGenerate}
                 isLoading={isLoading}
+                resumeData={resumeData}
               />
             </SubscriptionGate>
           </CardContent>
@@ -140,9 +141,10 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading })
             </TabsList>
 
             <TabsContent value="chat" className="mt-6">
-              <ChatInterface 
+              <ChatInterface
                 onContractGenerate={handleChatContractGenerate}
                 isLoading={isLoading}
+                resumeData={resumeData}
               />
             </TabsContent>
 

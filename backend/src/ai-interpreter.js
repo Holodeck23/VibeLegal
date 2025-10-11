@@ -229,22 +229,21 @@ router.post('/analyze-contract-requirements', asyncHandler(async (req, res) => {
 
   const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
 
-  // Check for force generation keywords
+  // Check for EXPLICIT force generation keywords only (more strict)
     const forceGenerationKeywords = [
-      'generate', 'generate now', 'create contract', 'create the contract', 
-      'proceed with contract', 'finish', 'done', 'complete', 'that\'s enough',
-      'generate contract now', 'create it', 'proceed', 'move forward',
-      'let\'s generate', 'ready to generate', 'create now'
+      'generate contract', 'generate the contract', 'generate contract now',
+      'create contract', 'create the contract', 'create contract now',
+      'generate it now', 'create it now', 'ready to generate'
     ];
-    
-    const shouldForceGenerate = forceGenerationKeywords.some(keyword => 
+
+    const shouldForceGenerate = forceGenerationKeywords.some(keyword =>
       userInput.toLowerCase().includes(keyword.toLowerCase())
     );
 
     // Count conversation turns to prevent endless loops
     const messages = conversationContext.messages || [];
     const conversationTurns = Math.floor(messages.length / 2); // Divide by 2 for user/bot pairs
-    const maxTurns = 8; // Maximum 8 back-and-forth exchanges
+    const maxTurns = 12; // Increased to 12 back-and-forth exchanges for more conversation
     const shouldAutoGenerate = conversationTurns >= maxTurns;
 
     // Build intelligent analysis prompt with strategic employer protections focus
@@ -270,11 +269,13 @@ router.post('/analyze-contract-requirements', asyncHandler(async (req, res) => {
 - Dispute resolution and arbitration clauses
 
 **CRITICAL INSTRUCTIONS:**
-- If user says words like "generate", "create contract", "proceed", "done", or similar - SET readyToGenerate to true
-- After 6+ exchanges, prioritize generation over more questions
+- ONLY set readyToGenerate to true if user EXPLICITLY says "generate contract" or "create contract" with clear intent
+- Continue conversational guidance even after 6+ exchanges unless user explicitly requests generation
+- Gather comprehensive contract details through natural conversation
 - Focus on strategic elements, not just basics - ask about protections they might not consider
 - Suggest protective clauses they haven't mentioned
 - Always consider California employment law requirements
+- Do NOT generate prematurely - ensure user has provided sufficient employment details first
 
 **Current conversation context:**
 ${JSON.stringify(conversationContext, null, 2)}

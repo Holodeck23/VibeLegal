@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X, Copy, RotateCcw, Square, Plus } from 'lucide-react';
 
-export function ChatInterface({ onContractGenerate, isLoading }) {
+export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
   const { handleAuthError } = useContext(AuthContext);
   const [messages, setMessages] = useState([
     {
@@ -102,37 +102,80 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
     }
   }, [messages]);
 
-  // Load recent chat session on component mount
+  // Load chat session on component mount - prioritize resumeData if provided
   useEffect(() => {
-    const loadRecentSession = async () => {
+    const loadSession = async () => {
       if (hasLoadedSession) return;
-      
+
       try {
+        // If resumeData is provided, restore that specific conversation
+        if (resumeData) {
+          console.log('Resuming conversation from resumeData:', resumeData);
+
+          // Restore conversation state from resumeData
+          if (resumeData.messages) {
+            setMessages(resumeData.messages);
+          }
+          if (resumeData.extractedParams) {
+            setSessionData(prev => ({
+              ...prev,
+              extractedParams: resumeData.extractedParams
+            }));
+          }
+          if (resumeData.conversationSummary) {
+            // Can use this for additional context if needed
+            console.log('Conversation summary available');
+          }
+
+          // Try to find the session ID from the most recent session since we don't have it in resumeData
+          const token = localStorage.getItem('token');
+          const response = await fetch('/api/ai/chat/recent', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.sessions && data.sessions.length > 0) {
+              setCurrentSessionId(data.sessions[0].id);
+            }
+          }
+
+          setProgressIndicator('60% complete'); // Resuming a conversation means we're already partway through
+          setCanForceGenerate(true); // Enable generation since we're resuming
+
+          console.log('Successfully resumed conversation from contract result page');
+          setHasLoadedSession(true);
+          return;
+        }
+
+        // Otherwise, load most recent session as before
         const token = localStorage.getItem('token');
         const response = await fetch('/api/ai/chat/recent', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (response.ok) {
           const data = await response.json();
           if (data.sessions && data.sessions.length > 0) {
             const recentSession = data.sessions[0];
             const sessionId = recentSession.id;
-            
+
             // Load the session details
             const sessionResponse = await fetch(`/api/ai/chat/${sessionId}`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
             });
-            
+
             if (sessionResponse.ok) {
               const sessionData = await sessionResponse.json();
               if (sessionData.session && sessionData.session.conversation_state) {
                 const conversationState = sessionData.session.conversation_state;
-                
+
                 // Restore conversation state
                 setCurrentSessionId(sessionId);
                 if (conversationState.messages) {
@@ -147,22 +190,22 @@ export function ChatInterface({ onContractGenerate, isLoading }) {
                 if (conversationState.canForceGenerate !== undefined) {
                   setCanForceGenerate(conversationState.canForceGenerate);
                 }
-                
+
                 console.log('Loaded existing chat session:', sessionId);
               }
             }
           }
         }
       } catch (error) {
-        console.error('Failed to load recent chat session:', error);
+        console.error('Failed to load chat session:', error);
         // Continue with fresh session if loading fails
       } finally {
         setHasLoadedSession(true);
       }
     };
-    
-    loadRecentSession();
-  }, [hasLoadedSession]);
+
+    loadSession();
+  }, [hasLoadedSession, resumeData]);
 
   // Save conversation state to backend
   const saveConversationState = async () => {
