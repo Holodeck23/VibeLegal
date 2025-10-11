@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X, Copy, RotateCcw, Square, Plus } from 'lucide-react';
 
-export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
+export function ChatInterface({ onContractGenerate, isLoading, resumeData, onConversationUpdate }) {
   const { handleAuthError } = useContext(AuthContext);
   const [messages, setMessages] = useState([
     {
@@ -101,6 +101,21 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData }) {
       }, 100);
     }
   }, [messages]);
+
+  // Send conversation updates to parent component
+  useEffect(() => {
+    if (onConversationUpdate && hasLoadedSession) {
+      const conversationState = {
+        extractedParams: sessionData.extractedParams,
+        progressIndicator: progressIndicator,
+        canGenerate: canForceGenerate,
+        messageCount: messages.length,
+        jurisdiction: sessionData.jurisdiction,
+        contractType: sessionData.contractType || 'Employment Agreement'
+      };
+      onConversationUpdate(conversationState);
+    }
+  }, [sessionData, progressIndicator, canForceGenerate, messages.length, hasLoadedSession, onConversationUpdate]);
 
   // Load chat session on component mount - prioritize resumeData if provided
   useEffect(() => {

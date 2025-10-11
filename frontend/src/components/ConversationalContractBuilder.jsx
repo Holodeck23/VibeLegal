@@ -24,12 +24,13 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
   const [contractData, setContractData] = useState(null);
   const [showUpgradeFlow, setShowUpgradeFlow] = useState(false);
   const [contractId, setContractId] = useState(null);
+  const [liveConversationData, setLiveConversationData] = useState(null);
   const { userTier, hasAccess, refreshTier } = useSubscription();
 
   const handleChatContractGenerate = async (chatData) => {
     console.log('Chat data received for generation:', chatData);
     setContractData(chatData);
-    
+
     // Generate the contract using the existing flow
     if (onContractGenerate) {
       const result = await onContractGenerate(chatData);
@@ -37,9 +38,14 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
         setContractId(result.contractId);
       }
     }
-    
+
     // Switch to preview tab after generation to show contract details
     setActiveTab('preview');
+  };
+
+  // Handle live conversation updates from ChatInterface
+  const handleConversationUpdate = (conversationState) => {
+    setLiveConversationData(conversationState);
   };
 
   // Note: Customization features moved to Enhanced section
@@ -86,6 +92,7 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
                 onContractGenerate={handleChatContractGenerate}
                 isLoading={isLoading}
                 resumeData={resumeData}
+                onConversationUpdate={handleConversationUpdate}
               />
             </SubscriptionGate>
           </CardContent>
@@ -145,85 +152,144 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
                 onContractGenerate={handleChatContractGenerate}
                 isLoading={isLoading}
                 resumeData={resumeData}
+                onConversationUpdate={handleConversationUpdate}
               />
             </TabsContent>
 
 
             <TabsContent value="history" className="mt-6">
-              {contractId ? (
-                <ContractVersionHistory
-                  contractId={contractId}
-                  onVersionSelect={handleVersionSelect}
-                  onRestore={handleVersionRestore}
-                />
-              ) : (
-                <VersionHistoryEmptyState 
-                  onCreateContract={() => setActiveTab('chat')}
-                />
-              )}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="w-5 h-5 text-purple-600" />
+                    Contract Versions
+                  </CardTitle>
+                  <CardDescription>
+                    Version history becomes available after contract generation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center h-48 text-center text-gray-500">
+                    <History className="w-16 h-16 mb-4 text-gray-400" />
+                    <p className="text-base font-medium">Versions Available After Generation</p>
+                    <p className="text-sm mt-2 max-w-md">
+                      Once you generate a contract, you can view and manage all versions from your dashboard.
+                      Each contract saves its complete history for easy comparison and restoration.
+                    </p>
+                    <Button
+                      onClick={() => setActiveTab('chat')}
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Continue Conversation
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="preview" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Contract Preview</CardTitle>
+                  <CardTitle>Live Contract Preview</CardTitle>
                   <CardDescription>
-                    Review your contract before finalizing
+                    See what information has been gathered from your conversation
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {contractData ? (
+                  {liveConversationData || contractData ? (
                     <div className="space-y-4">
+                      {/* Progress Indicator */}
+                      {liveConversationData?.progressIndicator && (
+                        <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium text-blue-900">Conversation Progress</span>
+                            <Badge className="bg-blue-600">{liveConversationData.progressIndicator}</Badge>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: liveConversationData.progressIndicator }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Extracted Parameters */}
                       <div className="p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-2">Contract Details</h4>
+                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                          Extracted Contract Information
+                        </h4>
+                        {liveConversationData?.extractedParams && Object.keys(liveConversationData.extractedParams).length > 0 ? (
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            {Object.entries(liveConversationData.extractedParams).map(([key, value]) => (
+                              <div key={key} className="p-2 bg-white rounded border">
+                                <span className="font-medium text-gray-700">{key}:</span>
+                                <p className="text-gray-600 mt-1">{value}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">
+                            Continue the conversation to extract contract parameters...
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Contract Type Info */}
+                      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h4 className="font-medium mb-2 text-blue-900">Contract Configuration</h4>
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <span className="font-medium">Type:</span> {contractData.contractType}
+                            <span className="font-medium text-blue-800">Type:</span>
+                            <p className="text-blue-700">
+                              {contractData?.contractType || liveConversationData?.contractType || 'Employment Agreement'}
+                            </p>
                           </div>
                           <div>
-                            <span className="font-medium">Client:</span> {contractData.parameters?.clientName}
-                          </div>
-                          <div>
-                            <span className="font-medium">Employee:</span> {contractData.parameters?.otherPartyName}
-                          </div>
-                          <div>
-                            <span className="font-medium">Jurisdiction:</span> {contractData.parameters?.jurisdiction}
+                            <span className="font-medium text-blue-800">Jurisdiction:</span>
+                            <p className="text-blue-700">
+                              {liveConversationData?.jurisdiction || 'California'}
+                            </p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <h4 className="font-medium mb-2">AI Configuration</h4>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="font-medium">Risk Tolerance:</span> {contractData.preferences?.risk_tolerance || 'Moderate'}
-                          </div>
-                          <div>
-                            <span className="font-medium">Legal Stance:</span> {contractData.preferences?.legal_stance || 'Neutral'}
-                          </div>
+                      {/* Message Count */}
+                      {liveConversationData?.messageCount && (
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <p className="text-sm text-green-800">
+                            <span className="font-medium">Conversation turns:</span> {liveConversationData.messageCount} messages exchanged
+                          </p>
                         </div>
-                      </div>
+                      )}
 
-                      <div className="flex gap-2">
-                        <Button onClick={() => setActiveTab('chat')}>
-                          Edit Requirements
+                      <div className="flex gap-2 pt-2">
+                        <Button onClick={() => setActiveTab('chat')} variant="outline">
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Continue Chat
                         </Button>
-                        <Button onClick={() => setActiveTab('history')} variant="outline">
-                          View Versions
-                        </Button>
-                        <Button 
-                          onClick={() => onContractGenerate && onContractGenerate(contractData)}
-                          disabled={isLoading}
-                          className="bg-blue-600 hover:bg-blue-700"
-                        >
-                          {isLoading ? 'Generating...' : 'Generate Final Contract'}
-                        </Button>
+                        {liveConversationData?.canGenerate && (
+                          <Button
+                            onClick={() => setActiveTab('chat')}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Ready to Generate
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-32 text-center text-gray-500">
-                      <FileText className="w-12 h-12 mb-3" />
-                      <p className="text-sm">Start a conversation to see contract preview</p>
+                    <div className="flex flex-col items-center justify-center h-48 text-center text-gray-500">
+                      <MessageCircle className="w-16 h-16 mb-4 text-gray-400" />
+                      <p className="text-base font-medium">Start a Conversation</p>
+                      <p className="text-sm mt-2 max-w-md">
+                        Begin chatting with the AI assistant to gather contract information.
+                        Extracted details will appear here in real-time.
+                      </p>
                     </div>
                   )}
                 </CardContent>
