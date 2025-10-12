@@ -183,6 +183,48 @@ npm run dev
 
 Access the application at `http://localhost:5173`
 
+## Containerized Deployment
+
+VibeLegal now ships with production-ready Docker images and an Nginx front-end so you can deploy the entire SaaS stack without configuration drift.
+
+### 1. Configure Environment
+
+1. Copy the root `.env.example` file to `.env` and update it with your secrets (OpenAI key, JWT secret, Stripe keys, etc.).
+2. Optionally, copy `backend/.env.example` to `backend/.env` if you plan to run the backend outside of Docker.
+
+The Compose stack will automatically read values from `.env` and fall back to sensible defaults for local Postgres credentials.
+
+### 2. Build & Start the Stack
+
+```bash
+docker compose up --build -d
+```
+
+This command builds three services:
+
+- **postgres** – managed PostgreSQL 15 instance with persistent volume storage.
+- **backend** – Node.js API built from `backend/Dockerfile` with health checks and strict env validation.
+- **frontend** – Static React build served by Nginx using `frontend/nginx.conf`, proxying `/api` calls to the backend container.
+
+Once the containers are healthy, the application is available at [http://localhost:8080](http://localhost:8080).
+
+### 3. Running Database Migrations
+
+Exec into the backend container to run SQL migrations against the bundled Postgres instance:
+
+```bash
+docker compose exec backend bash -c "psql $DATABASE_URL -f database.sql"
+docker compose exec backend bash -c "psql $DATABASE_URL -f stripe-migration.sql"
+```
+
+### 4. Shutting Down
+
+```bash
+docker compose down
+```
+
+Add `-v` to remove the Postgres volume as well.
+
 ## Subscription Tiers
 
 ### Basic (Free)
