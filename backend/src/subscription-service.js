@@ -15,6 +15,7 @@ const { pool } = require('./db/pool');
 const { authenticateToken } = require('../middleware/authenticateToken');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { getTierLimits, TIER_LIMITS } = require('./subscription-limits');
+const { LocalLLMProvider } = require('./ai-providers/local-llm-provider.js');
 
 const router = express.Router();
 
@@ -59,6 +60,60 @@ router.get('/subscription', authenticateToken, asyncHandler(async (req, res) => 
       stripeSubscriptionId: user.stripe_subscription_id
     }
   });
+}));
+
+// Local LLM / AI provider settings
+router.get('/settings', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  const result = await pool.query(
+    `SELECT local_llm_enabled, local_llm_endpoint, local_llm_model, local_llm_api_key
+     FROM users WHERE id = $1`,
+    [userId]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  res.json(result.rows[0]);
+}));
+
+router.put('/settings', authenticateToken, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const { local_llm_enabled, local_llm_endpoint, local_llm_model, local_llm_api_key } = req.body;
+
+  await pool.query(
+    `UPDATE users
+       SET local_llm_enabled = $1,
+           local_llm_endpoint = $2,
+           local_llm_model = $3,
+           local_llm_api_key = $4,
+           updated_at = NOW()
+     WHERE id = $5`,
+    [
+      !!local_llm_enabled,
+      local_llm_endpoint || null,
+      local_llm_model || null,
+      local_llm_api_key || null,
+      userId
+    ]
+  );
+
+  res.json({ message: 'Settings updated successfully' });
+}));
+
+router.post('/test-local-llm', authenticateToken, asyncHandler(async (req, res) => {
+  const { endpoint, model, apiKey } = req.body;
+
+  try {
+    const provider = new LocalLLMProvider({ endpoint, model, apiKey });
+    const testPrompt = 'Respond with valid JSON: {"status": "ok"}';
+    const response = await provider._makeRequest(testPrompt);
+    res.json({ success: true, message: 'Connection successful', response });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
 }));
 
 // Check feature access

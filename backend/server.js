@@ -274,7 +274,7 @@ app.post('/api/generate-contract', authenticateToken, asyncHandler(async (req, r
 
   let aiResult = null;
   try {
-    aiResult = await interpretWithAI(aiUserInput, {}, "gemini-2.5-pro");
+    aiResult = await interpretWithAI(aiUserInput, {}, "gemini-2.5-pro", req.user.userId);
   } catch (aiError) {
     console.log("AI analysis failed, using standard generation:", aiError.message);
   }
@@ -305,7 +305,7 @@ app.post('/api/generate-contract-enhanced', authenticateToken, asyncHandler(asyn
 
   let aiResult = null;
   try {
-    aiResult = await interpretWithAI(aiUserInput, {}, "gemini-2.5-pro");
+    aiResult = await interpretWithAI(aiUserInput, {}, "gemini-2.5-pro", req.user.userId);
   } catch (aiError) {
     console.log("AI analysis failed, using enhanced generation:", aiError.message);
   }

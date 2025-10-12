@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X, Copy, RotateCcw, Square, Plus } from 'lucide-react';
+import { Loader2, Send, User, Bot, CheckCircle, HelpCircle, X, Copy, RotateCcw, Square, Plus, Save } from 'lucide-react';
 
-export function ChatInterface({ onContractGenerate, isLoading, resumeData, onConversationUpdate }) {
+export function ChatInterface({ onContractGenerate, isLoading, resumeData, onConversationUpdate, resumeSessionId }) {
   const { handleAuthError } = useContext(AuthContext);
   const [messages, setMessages] = useState([
     {
@@ -35,6 +35,9 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
   const [abortController, setAbortController] = useState(null);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [hasLoadedSession, setHasLoadedSession] = useState(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [chatName, setChatName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const scrollRef = useRef(null);
 
   // Intelligent AI conversation system
@@ -179,6 +182,40 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
           }
         }
 
+        if (resumeSessionId) {
+          const token = localStorage.getItem('token');
+          const sessionResponse = await fetch(`/api/ai/chat/${resumeSessionId}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+
+          if (sessionResponse.ok) {
+            const data = await sessionResponse.json();
+            if (data.session && data.session.conversationState) {
+              const conversationState = data.session.conversationState;
+              setCurrentSessionId(data.session.id);
+
+              if (conversationState.messages) {
+                setMessages(conversationState.messages);
+              }
+              if (conversationState.sessionData) {
+                setSessionData(conversationState.sessionData);
+              }
+              if (conversationState.progressIndicator) {
+                setProgressIndicator(conversationState.progressIndicator);
+              }
+              if (conversationState.canForceGenerate !== undefined) {
+                setCanForceGenerate(conversationState.canForceGenerate);
+              }
+
+              console.log('Resumed chat session from dashboard:', resumeSessionId);
+              setHasLoadedSession(true);
+              return;
+            }
+          }
+        }
+
         // Otherwise, load most recent session as before
         const token = localStorage.getItem('token');
         const response = await fetch('/api/ai/chat/recent', {
@@ -234,12 +271,12 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
     };
 
     loadSession();
-  }, [hasLoadedSession, resumeData]);
+  }, [hasLoadedSession, resumeData, resumeSessionId]);
 
   // Save conversation state to backend
   const saveConversationState = async () => {
     if (!currentSessionId) return;
-    
+
     try {
       const token = localStorage.getItem('token');
       const conversationState = {
@@ -263,6 +300,46 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
       });
     } catch (error) {
       console.error('Failed to save conversation state:', error);
+    }
+  };
+
+  const handleSaveChat = async () => {
+    if (!currentSessionId) {
+      alert('No active chat to save yet.');
+      return;
+    }
+
+    if (!chatName.trim()) {
+      alert('Please enter a name for this chat');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/ai/chat/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          name: chatName.trim()
+        })
+      });
+
+      if (response.ok) {
+        alert('Chat saved successfully!');
+        setShowSaveDialog(false);
+        setChatName('');
+      } else {
+        alert('Failed to save chat');
+      }
+    } catch (error) {
+      alert('Failed to save chat');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -306,7 +383,10 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
     setCanForceGenerate(false);
     setIsTyping(false);
     setInput('');
-    
+    setShowSaveDialog(false);
+    setChatName('');
+    setIsSaving(false);
+
     console.log('New chat conversation started - all state reset');
   };
 
@@ -1050,6 +1130,41 @@ export function ChatInterface({ onContractGenerate, isLoading, resumeData, onCon
               <Plus className="w-4 h-4 mr-1" />
               New Chat
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSaveDialog(true)}
+              className="text-purple-600 border-purple-200"
+              disabled={messages.length <= 1 || !currentSessionId}
+            >
+              <Save className="w-4 h-4 mr-1" />
+              Save Chat
+            </Button>
+            <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Save AI Chat Session</DialogTitle>
+                  <DialogDescription>
+                    Give this conversation a name to find it later
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 mt-4">
+                  <Input
+                    value={chatName}
+                    onChange={(e) => setChatName(e.target.value)}
+                    placeholder="e.g., Software Engineer Contract - Acme Corp"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSaveChat();
+                      }
+                    }}
+                  />
+                  <Button onClick={handleSaveChat} disabled={isSaving} className="w-full">
+                    {isSaving ? 'Saving...' : 'Save Chat'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Dialog open={showHelp} onOpenChange={setShowHelp}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">

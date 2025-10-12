@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
 import { ChatInterface } from './ChatInterface';
-import { ContractVersionHistory } from './ContractVersionHistory';
 import { SubscriptionGate, useSubscription } from './SubscriptionGate';
 import { ProUpgradeFlow } from './ProUpgradeFlow';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CommonTooltips, SecurityIndicator, HelpTooltip } from './HelpTooltip';
-import { VersionHistoryEmptyState } from './EmptyState';
+import { CommonTooltips, SecurityIndicator } from './HelpTooltip';
 import { 
   MessageCircle, 
-  History, 
   FileText, 
   Crown,
   Sparkles,
@@ -19,7 +16,7 @@ import {
   Info
 } from 'lucide-react';
 
-export function ConversationalContractBuilder({ onContractGenerate, isLoading, resumeData }) {
+export function ConversationalContractBuilder({ onContractGenerate, isLoading, resumeData, resumeSessionId }) {
   const [activeTab, setActiveTab] = useState('chat');
   const [contractData, setContractData] = useState(null);
   const [showUpgradeFlow, setShowUpgradeFlow] = useState(false);
@@ -93,6 +90,7 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
                 isLoading={isLoading}
                 resumeData={resumeData}
                 onConversationUpdate={handleConversationUpdate}
+                resumeSessionId={resumeSessionId}
               />
             </SubscriptionGate>
           </CardContent>
@@ -132,14 +130,10 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
 
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="chat" className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4" />
                 AI Chat
-              </TabsTrigger>
-              <TabsTrigger value="history" className="flex items-center gap-2">
-                <History className="w-4 h-4" />
-                Versions
               </TabsTrigger>
               <TabsTrigger value="preview" className="flex items-center gap-2">
                 <FileText className="w-4 h-4" />
@@ -154,41 +148,9 @@ export function ConversationalContractBuilder({ onContractGenerate, isLoading, r
                 isLoading={isLoading}
                 resumeData={resumeData}
                 onConversationUpdate={handleConversationUpdate}
+                resumeSessionId={resumeSessionId}
               />
             </div>
-
-
-            <TabsContent value="history" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <History className="w-5 h-5 text-purple-600" />
-                    Contract Versions
-                  </CardTitle>
-                  <CardDescription>
-                    Version history becomes available after contract generation
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center h-48 text-center text-gray-500">
-                    <History className="w-16 h-16 mb-4 text-gray-400" />
-                    <p className="text-base font-medium">Versions Available After Generation</p>
-                    <p className="text-sm mt-2 max-w-md">
-                      Once you generate a contract, you can view and manage all versions from your dashboard.
-                      Each contract saves its complete history for easy comparison and restoration.
-                    </p>
-                    <Button
-                      onClick={() => setActiveTab('chat')}
-                      variant="outline"
-                      className="mt-4"
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Continue Conversation
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
             <TabsContent value="preview" className="mt-6">
               <Card>
