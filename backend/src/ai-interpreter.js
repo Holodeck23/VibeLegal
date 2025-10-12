@@ -1,7 +1,7 @@
 const express = require('express');
-const { GoogleAIProvider } = require('./ai-providers/google-ai-provider.js');
 const { pool } = require('./db/pool');
 const { asyncHandler } = require('../middleware/errorHandler');
+const { getAIProvider } = require('./utils/ai-provider-factory.js');
 
 const router = express.Router();
 
@@ -51,7 +51,7 @@ router.post('/interpret', asyncHandler(async (req, res) => {
   }
 
   // Initialize AI provider with selected model
-  const aiProvider = new GoogleAIProvider({ model });
+  const aiProvider = await getAIProvider(req.user?.userId, { model });
 
   // Generate contract specification using AI
   const aiGeneratedSpec = await aiProvider.generateContractSpec(userInput, context);
@@ -321,7 +321,7 @@ router.post('/chat/message', asyncHandler(async (req, res) => {
 
   // Use the unified, intelligent analysis for every message
   // Process message with AI if needed
-  const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
+  const aiProvider = await getAIProvider(userId, { model: 'gemini-2.0-flash-exp' });
   const aiAnalysis = await analyzeConversationTurn(message, updatedStateWithUserMessage, aiProvider);
 
   // Construct the final conversation state to be saved
@@ -356,6 +356,32 @@ router.post('/chat/message', asyncHandler(async (req, res) => {
   });
 }));
 
+// Save chat with custom name
+router.post('/chat/save', asyncHandler(async (req, res) => {
+  const { sessionId, name } = req.body;
+  const userId = req.user.userId;
+
+  if (!name || name.trim() === '') {
+    return res.status(400).json({ success: false, error: 'Chat name is required' });
+  }
+
+  const result = await pool.query(
+    `UPDATE chat_sessions
+        SET name = $1,
+            is_saved = TRUE,
+            updated_at = NOW()
+      WHERE id = $2 AND user_id = $3
+      RETURNING id`,
+    [name.trim(), sessionId, userId]
+  );
+
+  if (result.rows.length === 0) {
+    return res.status(404).json({ success: false, error: 'Chat session not found' });
+  }
+
+  res.json({ success: true, message: 'Chat saved successfully' });
+}));
+
 // Get recent chat sessions for the user
 router.get('/chat/recent', asyncHandler(async (req, res) => {
   const userId = req.user.userId;
@@ -372,6 +398,24 @@ router.get('/chat/recent', asyncHandler(async (req, res) => {
   res.json({
     success: true,
     sessions: result.rows
+  });
+}));
+
+// Get saved chats for dashboard view
+router.get('/chat/saved', asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  const result = await pool.query(
+    `SELECT id, name, contract_type, conversation_state, created_at, updated_at
+       FROM chat_sessions
+      WHERE user_id = $1 AND is_saved = TRUE
+      ORDER BY updated_at DESC`,
+    [userId]
+  );
+
+  res.json({
+    success: true,
+    chats: result.rows
   });
 }));
 
@@ -411,7 +455,7 @@ router.post('/analyze-contract-requirements', asyncHandler(async (req, res) => {
   const userId = req.user.userId;
 
   // This endpoint now acts as a wrapper around the core analysis function
-  const aiProvider = new GoogleAIProvider({ model: 'gemini-2.0-flash-exp' });
+  const aiProvider = await getAIProvider(userId, { model: 'gemini-2.0-flash-exp' });
   const aiAnalysis = await analyzeConversationTurn(userInput, conversationContext, aiProvider);
 
   res.json({
@@ -425,7 +469,7 @@ router.post('/enhance-contract-language', asyncHandler(async (req, res) => {
   const { contractContent, contractParams, aiAnalysis } = req.body;
   const userId = req.user.userId;
 
-  const aiProvider = new GoogleAIProvider({ model: 'gemini-2.5-pro' });
+  const aiProvider = await getAIProvider(userId, { model: 'gemini-2.5-pro' });
 
   // Build legal enhancement prompt
     const enhancementPrompt = `You are a senior legal expert specializing in employment contract drafting. Your task is to enhance and polish the provided contract content with professional legal language, ensuring:
@@ -482,12 +526,12 @@ ${JSON.stringify(aiAnalysis, null, 2)}
  * @param {string} model - AI model to use (default: gemini-2.5-pro)
  * @returns {Promise<object>} - AI-generated contract specification
  */
-async function interpretWithAI(userInput, context = {}, model = 'gemini-2.5-pro') {
+async function interpretWithAI(userInput, context = {}, model = 'gemini-2.5-pro', userId = null) {
   if (!userInput || typeof userInput !== 'string' || userInput.trim().length === 0) {
     throw new Error('userInput is required and must be a non-empty string');
   }
 
-  const aiProvider = new GoogleAIProvider({ model });
+  const aiProvider = await getAIProvider(userId, { model });
   const aiGeneratedSpec = await aiProvider.generateContractSpec(userInput, context);
 
   return {

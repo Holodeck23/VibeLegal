@@ -40,6 +40,9 @@ const Navbar = () => {
                 <Link to="/create-contract" className="text-gray-700 hover:text-blue-600 transition-colors">
                   Create Contract
                 </Link>
+                <Link to="/settings" className="text-gray-700 hover:text-blue-600 transition-colors">
+                  Settings
+                </Link>
                 {user.is_admin && (
                   <Link to="/admin" className="flex items-center text-blue-600 hover:text-blue-800 transition-colors font-medium">
                     <Shield className="h-4 w-4 mr-1" />
@@ -106,6 +109,13 @@ const Navbar = () => {
                   >
                     Create Contract
                   </Link>
+                  <Link
+                    to="/settings"
+                    className="block px-3 py-2 text-gray-700 hover:text-blue-600"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Settings
+                  </Link>
                   {user.is_admin && (
                     <Link
                       to="/admin"
@@ -142,4 +152,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-

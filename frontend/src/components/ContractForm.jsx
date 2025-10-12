@@ -26,6 +26,8 @@ const ContractForm = () => {
   const [showProModal, setShowProModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const resumeChatSessionId = searchParams.get('resumeChat');
 
   const [isEnhancedMode, setIsEnhancedMode] = useState(true);
   const [useConversationalAI, setUseConversationalAI] = useState(false);
@@ -37,6 +39,13 @@ const ContractForm = () => {
       setUseConversationalAI(true);
     }
   }, [location.state]);
+
+  useEffect(() => {
+    if (resumeChatSessionId) {
+      setIsEnhancedMode(true);
+      setUseConversationalAI(true);
+    }
+  }, [resumeChatSessionId]);
 
   // Reset conversational AI toggle when switching out of enhanced mode
   useEffect(() => {
@@ -327,6 +336,7 @@ const ContractForm = () => {
                 onContractGenerate={handleEnhancedGenerate}
                 isLoading={loading}
                 resumeData={location.state?.conversationalData || null}
+                resumeSessionId={resumeChatSessionId}
               />
             ) : isEnhancedMode ? (
               <EnhancedContractBuilder 
@@ -471,4 +481,3 @@ const ContractForm = () => {
 };
 
 export default ContractForm;
-

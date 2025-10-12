@@ -1,9 +1,10 @@
 import config from '../config.js';
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../App';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,11 +19,13 @@ import {
   Search,
   Filter,
   Zap,
-  Users
+  Users,
+  MessageSquare
 } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [contracts, setContracts] = useState([]);
   const [contractStats, setContractStats] = useState({
     totalCount: 0,
@@ -33,9 +36,14 @@ const Dashboard = () => {
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, title }
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
+  const [savedChats, setSavedChats] = useState([]);
+  const [savedChatsLoading, setSavedChatsLoading] = useState(false);
+  const [savedChatsError, setSavedChatsError] = useState('');
+  const [activeTab, setActiveTab] = useState('contracts');
 
   useEffect(() => {
     fetchContracts();
+    fetchSavedChats();
   }, []);
 
   const fetchContracts = async () => {
@@ -69,6 +77,35 @@ const Dashboard = () => {
       setError('Network error. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSavedChats = async () => {
+    try {
+      setSavedChatsLoading(true);
+      setSavedChatsError('');
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${config.API_BASE_URL}/api/ai/chat/saved`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSavedChats(data.chats || []);
+      } else {
+        if (response.status === 401 || response.status === 403) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return;
+        }
+        setSavedChatsError('Failed to load saved chats');
+      }
+    } catch (err) {
+      setSavedChatsError('Network error. Please try again.');
+    } finally {
+      setSavedChatsLoading(false);
     }
   };
 
@@ -412,118 +449,253 @@ const Dashboard = () => {
 
             </div>
             
-            {/* Search and Filter */}
-            {contracts.length > 0 && (
-              <div className="flex gap-4 mt-4">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Search contracts..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-48">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contractTypes.map(type => (
-                      <SelectItem key={type} value={type}>
-                        {type === 'all' ? 'All Types' : type}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="contracts" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Contracts ({contracts.length})
+                </TabsTrigger>
+                <TabsTrigger value="chats" className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Saved Chats ({savedChats.length})
+                </TabsTrigger>
+              </TabsList>
 
-              </div>
-            ) : error ? (
-              <div className="text-center py-8 text-red-600">
-                {error}
+              <TabsContent value="contracts" className="space-y-4">
+                {contracts.length > 0 && (
+                  <div className="flex gap-4">
+                    <div className="relative flex-1 max-w-sm">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Input
+                        placeholder="Search contracts..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="w-48">
+                        <Filter className="mr-2 h-4 w-4" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contractTypes.map(type => (
+                          <SelectItem key={type} value={type}>
+                            {type === 'all' ? 'All Types' : type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-              </div>
-            ) : contracts.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No contracts yet
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Create your first contract to get started
-                </p>
-                <Link to="/create-contract">
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Your First Contract
-                  </Button>
-                </Link>
-
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredContracts.length === 0 && contracts.length > 0 ? (
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : error ? (
+                  <div className="text-center py-8 text-red-600">
+                    {error}
+                  </div>
+                ) : contracts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No contracts yet
+                    </h3>
+                    <p className="text-gray-600 mb-4">
+                      Create your first contract to get started
+                    </p>
+                    <Link to="/create-contract">
+                      <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Your First Contract
+                      </Button>
+                    </Link>
+                  </div>
+                ) : filteredContracts.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Search className="h-8 w-8 mx-auto mb-2" />
                     <p>No contracts match your search criteria</p>
                   </div>
                 ) : (
-                  filteredContracts.map((contract) => (
-                    <div
-                      key={contract.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <Link 
-                        to={`/contracts/${contract.id}`} 
-                        className="flex items-center space-x-4 flex-1 hover:text-blue-600 transition-colors"
+                  <div className="space-y-4">
+                    {filteredContracts.map((contract) => (
+                      <div
+                        key={contract.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                       >
-                        <div className="bg-blue-100 p-2 rounded-lg">
-                          <FileText className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
-                            {contract.title}
-                          </h3>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Badge 
-                              variant="secondary" 
-                              className={getContractTypeColor(contract.contract_type)}
-                            >
-                              {contract.contract_type}
-                            </Badge>
-                            <span className="text-sm text-gray-500">
-                              Created {formatDate(contract.created_at)}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setDeleteConfirm({ id: contract.id, title: contract.title })}
-                          className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                          title="Delete contract"
+                        <Link
+                          to={`/contracts/${contract.id}`}
+                          className="flex items-center space-x-4 flex-1 hover:text-blue-600 transition-colors"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                        <span className="text-sm text-gray-500">Saved</span>
+                          <div className="bg-blue-100 p-2 rounded-lg">
+                            <FileText className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                              {contract.title}
+                            </h3>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Badge
+                                variant="secondary"
+                                className={getContractTypeColor(contract.contract_type)}
+                              >
+                                {contract.contract_type}
+                              </Badge>
+                              <span className="text-sm text-gray-500">
+                                Created {formatDate(contract.created_at)}
+                              </span>
+                            </div>
+                          </div>
+                        </Link>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setDeleteConfirm({ id: contract.id, title: contract.title })}
+                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                            title="Delete contract"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                          <CheckCircle className="h-5 w-5 text-green-500" />
+                          <span className="text-sm text-gray-500">Saved</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="chats" className="space-y-4">
+                {savedChatsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : savedChatsError ? (
+                  <div className="text-center py-8 text-red-600">{savedChatsError}</div>
+                ) : savedChats.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-8 text-center text-gray-500 space-y-2">
+                      <MessageSquare className="w-12 h-12 mx-auto text-gray-400" />
+                      <p>No saved chats yet</p>
+                      <p className="text-sm text-gray-400">
+                        Use the "Save Chat" button in AI Chat to save conversations
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  savedChats.map((chat) => {
+                    let messageCount = 0;
+                    try {
+                      const state = chat.conversation_state ? JSON.parse(chat.conversation_state) : {};
+                      messageCount = Array.isArray(state.messages) ? state.messages.length : 0;
+                    } catch (err) {
+                      console.error('Failed to parse conversation state', err);
+                    }
+
+                    return (
+                      <Card key={chat.id} className="hover:border-purple-300 transition-colors">
+                        <CardContent className="p-4 flex items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <h3 className="font-medium">{chat.name || 'Untitled Chat'}</h3>
+                            <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                              <span>{new Date(chat.created_at).toLocaleDateString()}</span>
+                              <span>{messageCount} messages</span>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => navigate(`/create-contract?resumeChat=${chat.id}`)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Resume
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+
+        {/* Quick Start Shortcuts */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Quick Start Templates</CardTitle>
+            <CardDescription>Create a contract with one of our recommended flows</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-4 gap-4">
+              <Link to="/create-contract" className="block">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-blue-100 p-2 rounded-lg">
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">Standard Employment</h3>
+                        <p className="text-sm text-gray-600">Full-time, at-will employment</p>
                       </div>
                     </div>
-                  ))
-                )}
+                  </CardContent>
+                </Card>
+              </Link>
 
+              <Link to="/create-contract" className="block">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-purple-100 p-2 rounded-lg">
+                        <Zap className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">AI Conversational</h3>
+                        <p className="text-sm text-gray-600">Chat-based contract creation</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              </div>
-            )}
+              <Link to="/create-contract" className="block">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-green-100 p-2 rounded-lg">
+                        <Users className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">Executive Level</h3>
+                        <p className="text-sm text-gray-600">Enhanced terms & severance</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
 
+              <Link to="/create-contract" className="block">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+                  <CardContent className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-orange-100 p-2 rounded-lg">
+                        <Clock className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900">Part-Time / Remote</h3>
+                        <p className="text-sm text-gray-600">Flexible arrangements</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            </div>
           </CardContent>
         </Card>
 
@@ -562,4 +734,3 @@ const Dashboard = () => {
 
 
 export default Dashboard;
-

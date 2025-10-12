@@ -11,6 +11,7 @@ import ContractForm from './components/ContractForm';
 import ContractResult from './components/ContractResult';
 import ContractViewer from './components/ContractViewer';
 import Dashboard from './components/Dashboard';
+import Settings from './components/Settings';
 import Pricing from './components/Pricing';
 import About from './components/About';
 import Contact from './components/Contact';
@@ -139,6 +140,10 @@ function App() {
                     element={user ? <ContractForm /> : <Navigate to="/login" />}
                   />
                   <Route
+                    path="/settings"
+                    element={user ? <Settings /> : <Navigate to="/login" />}
+                  />
+                  <Route
                     path="/contract-result"
                     element={user ? <ContractResult /> : <Navigate to="/login" />}
                   />
@@ -160,4 +165,3 @@ function App() {
 }
 
 export default App;
-
