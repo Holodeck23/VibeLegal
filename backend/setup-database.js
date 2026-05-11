@@ -32,7 +32,7 @@ async function setupDatabase() {
       const bcrypt = require('bcryptjs');
       
       // Create demo users with hashed passwords
-      const demoPassword = await bcrypt.hash('DemoPassword123!', 10);
+      const demoPassword = await bcrypt.hash(process.env.DEMO_PASSWORD || 'change-me-before-running', 10);
       
       await pool.query(`
         INSERT INTO users (email, password_hash, subscription_tier, contracts_used_this_month) VALUES 
@@ -59,9 +59,10 @@ async function setupDatabase() {
 
     console.log('\n🎉 Database setup complete!');
     console.log('\n📋 Demo Accounts:');
-    console.log('• demo@vibelegal.com (Password: DemoPassword123!)');
-    console.log('• premium@vibelegal.com (Password: DemoPassword123!)');
-    console.log('• lawyer@lawfirm.com (Password: DemoPassword123!)');
+    console.log('• demo@vibelegal.com');
+    console.log('• premium@vibelegal.com');
+    console.log('• lawyer@lawfirm.com');
+    console.log('(Passwords set via DEMO_PASSWORD env var)');
 
   } catch (error) {
     console.error('❌ Database setup failed:', error.message);

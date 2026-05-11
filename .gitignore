@@ -30,6 +30,8 @@ release.log
 !.env.example
 
 # Local development files
+*.token.txt
+.token.txt
 *.local
 *.secret
 *.bak

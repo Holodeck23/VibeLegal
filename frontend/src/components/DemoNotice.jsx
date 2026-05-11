@@ -23,11 +23,7 @@ const DemoNotice = () => {
             <div className="text-sm space-y-1">
               <p className="flex items-center gap-1">
                 <Users className="h-3 w-3" />
-                <span>Test Account: test2@vibelegal.com</span>
-              </p>
-              <p className="flex items-center gap-1">
-                <Key className="h-3 w-3" />
-                <span>Password: Password1</span>
+                <span>Sign up for a free account to explore the demo</span>
               </p>
             </div>
             <p className="text-xs mt-2">

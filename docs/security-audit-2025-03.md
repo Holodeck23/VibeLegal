@@ -8,7 +8,7 @@
    - **Description:** The `/api/user/update-tier` endpoint is exposed to any authenticated end user and writes the requested `tier` directly into the `users` table without validation or payment verification. An attacker can self-upgrade to the `pro` or `enterprise` tiers (or an arbitrary string) and gain unlimited premium features without paying.
    - **Proof of Concept:**
      ```bash
-     curl -X POST https://api.vibelegal.com/api/user/update-tier \
+     curl -X POST https://<your-api-host>/api/user/update-tier \
        -H "Authorization: Bearer <user_jwt>" \
        -H "Content-Type: application/json" \
        -d '{"tier":"enterprise","stripeSubscriptionId":"fake"}'

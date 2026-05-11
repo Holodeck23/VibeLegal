@@ -224,7 +224,7 @@
 
 ## Test User
 - **Email**: test2@vibelegal.com
-- **Password**: DemoPassword123!
+- **Password**: (set locally — do not commit credentials)
 - **Status**: 28+ total contracts (Pro tier)
 
 **Password Requirements:**

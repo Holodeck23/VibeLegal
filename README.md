@@ -376,7 +376,7 @@ node tests/admin-integration-test.js # Admin dashboard tests
 ### Test Account
 
 - **Email**: test2@vibelegal.com
-- **Password**: DemoPassword123!
+- **Password**: (set locally — do not commit credentials)
 - **Status**: 28+ contracts (Pro tier)
 
 **Password Requirements:**
@@ -505,3 +505,7 @@ All generated contracts include appropriate legal disclaimers and should be revi
 **Current Branch**: `admin-dashboard`
 **Status**: Ready for production deployment
 **Last Updated**: October 10, 2025
+
+---
+
+&copy; 2025 VibeLegal. All rights reserved. This source code is made available for portfolio and reference purposes only. No license is granted to use, copy, modify, or distribute this code without explicit written permission.
